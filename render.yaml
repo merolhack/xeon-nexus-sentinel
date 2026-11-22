@@ -14,6 +14,6 @@ services:
       - key: ADMIN_PASSWORD_HASH
         value: ea51164dd668d869a14e71ec9a54f1ea60df5f71e7db86fa3a7fdd79c74e9e2a
       - key: JWT_SECRET_KEY
-        value: 9xLp8qWk3mRj2nTb7sFv6eGz4dCp9yMq5rHt0wLs1aEj8bNk4mXp7cQr2d
+        generateValue: true
       - key: SERVER_INGEST_TOKEN
-        value: 7zKp8qWk3mRj2nTb7sFv6eGz4dCp9yMq5rHt0wLs1aEj8bNk4mXp7cQr2d
+        generateValue: true

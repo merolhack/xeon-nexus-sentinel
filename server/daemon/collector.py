@@ -203,8 +203,8 @@ def collect_snapshot(prev_total, prev_cores, config):
 
 
 def send_telemetry(payload, config):
-    url = config.get("server", {}).get("report_url")
-    token = config.get("server", {}).get("server_token")
+    url = os.environ.get("REPORT_URL") or config.get("server", {}).get("report_url")
+    token = os.environ.get("SERVER_INGEST_TOKEN") or config.get("server", {}).get("server_token")
     headers = {
         "Content-Type": "application/json",
         "X-Server-Token": token

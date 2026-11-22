@@ -1,8 +1,8 @@
 server:
   node_name: "hp-proliant-ml150-g6"
   interval_seconds: 5
-  report_url: "https://your-cloud-relay.koyeb.app/api/telemetry"
-  server_token: "7zKp8qWk3mRj2nTb7sFv6eGz4dCp9yMq5rHt0wLs1aEj8bNk4mXp7cQr2d"
+  report_url: "https://xeon-nexus-cloud-relay.onrender.com/api/telemetry"
+  server_token: "CAMBIAR_POR_TOKEN_EN_ENV"
 
 sensors:
   cpu_temp_path: "/sys/class/thermal/thermal_zone0/temp"

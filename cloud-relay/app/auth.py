@@ -12,7 +12,12 @@ import jwt
 from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "9xLp8qWk3mRj2nTb7sFv6eGz4dCp9yMq5rHt0wLs1aEj8bNk4mXp7cQr2d")
+import secrets
+
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    JWT_SECRET_KEY = secrets.token_hex(32)
+
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
@@ -20,7 +25,7 @@ ADMIN_USER = os.environ.get("ADMIN_USER", "administrador")
 # Hash SHA-256 de contraseña autorizada
 ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "ea51164dd668d869a14e71ec9a54f1ea60df5f71e7db86fa3a7fdd79c74e9e2a")
 
-SERVER_INGEST_TOKEN = os.environ.get("SERVER_INGEST_TOKEN", "7zKp8qWk3mRj2nTb7sFv6eGz4dCp9yMq5rHt0wLs1aEj8bNk4mXp7cQr2d")
+SERVER_INGEST_TOKEN = os.environ.get("SERVER_INGEST_TOKEN", "dev-insecure-ingest-token-placeholder")
 
 security_bearer = HTTPBearer(auto_error=False)
 
