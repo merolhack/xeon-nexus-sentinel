@@ -40,10 +40,20 @@ El script implementa tres operaciones principales con validación de integridad 
 | `Sync` | `rclone sync` | Mantiene el destino exactamente idéntico al origen. | Espejado unidireccional de directorios de trabajo. |
 
 ### Parámetros Principales
-- `-SourcePath`: Ruta local de origen (ej: `C:\Users\lenin\Downloads`).
-- `-RemotePath`: Directorio remoto en Google Drive (por defecto: `gdrive:Laptop_Thunderobot/Backups`).
-- `-MinAgeDays`: Filtra únicamente archivos con más de N días de antigüedad (ej: `-MinAgeDays 60` para mover sólo descargas antiguas).
+- `-SourcePath`: Ruta local de origen (ej: `C:\Users\lenin\Documents`).
+- `-RemotePath`: Directorio remoto en Google Drive (ej: `gdrive:Backup/Documents`).
+- `-BeforeDate`: Fecha de corte temporal (por defecto: `'2026-01-01'`).
+- `-CheckLastAccess`: Validación dual estricta. Exige que el archivo no haya sido modificado ni abierto/leído (`LastAccessTime`) después de la fecha de corte. Protege archivos antiguos que se siguen utilizando activamente (como canciones o documentos de consulta frecuente).
+- `-MinAgeDays`: Filtra únicamente archivos con más de N días de antigüedad (ej: `-MinAgeDays 60`).
 - `-DryRun`: Switch de simulación que lista las acciones sin realizar ningún cambio ni borrado.
+
+---
+
+## 4. Regla de Inactividad Real (LastWriteTime vs LastAccessTime)
+
+En Windows 11 NTFS, la actualización de último acceso se encuentra habilitada (`DisableLastAccess = 2`). Una auditoría sobre 170,495 archivos reveló que 40,842 archivos modificados antes de 2026 (23.77 GB) fueron abiertos y utilizados durante 2026.
+Para evitar archivar o borrar archivos de consulta activa (como la música o referencias cotidianas), el sistema requiere la evaluación conjunta:
+`LastWriteTime < FechaCorte Y LastAccessTime < FechaCorte`.
 
 ---
 
