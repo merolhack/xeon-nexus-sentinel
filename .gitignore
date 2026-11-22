@@ -1,0 +1,38 @@
+# Dependencias y entornos
+node_modules/
+.next/
+out/
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Secretos y variables de entorno
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.token
+
+# Archivos temporales y metadatos Windows / WSL
+*:Zone.Identifier
+*Zone.Identifier*
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Base de datos local de conocimiento
+.codebase-memory/

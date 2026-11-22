@@ -1,0 +1,24 @@
+{
+  "name": "xeon-nexus-sentinel",
+  "version": "1.0.0",
+  "description": "Ecosistema Híbrido Xeon-Nexus (IA, Criptominería y Telemetría Headless)",
+  "type": "module",
+  "scripts": {
+    "clean:zones": "bash scripts/clean-zone-identifiers.sh",
+    "wiki:sync-notebook": "node scripts/sync-wiki-to-notebook.mjs",
+    "wiki:sync-notebook:if-changed": "node scripts/sync-wiki-to-notebook.mjs --if-changed",
+    "dashboard:dev": "cd dashboard && npm run dev",
+    "dashboard:build": "cd dashboard && npm run build"
+  },
+  "keywords": [
+    "xeon",
+    "almalinux",
+    "headless",
+    "ollama",
+    "fastapi",
+    "nextjs",
+    "llm-wiki"
+  ],
+  "author": "merolhack",
+  "license": "MIT"
+}

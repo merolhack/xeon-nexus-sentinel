@@ -1,0 +1,19 @@
+[Unit]
+Description=Xeon-Sentinel Headless Telemetry Daemon
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/xeon-sentinel
+Environment=SENTINEL_CONFIG=/opt/xeon-sentinel/config.yaml
+ExecStart=/usr/bin/python3 /opt/xeon-sentinel/collector.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

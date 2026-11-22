@@ -1,0 +1,22 @@
+server:
+  node_name: "hp-proliant-ml150-g6"
+  interval_seconds: 5
+  report_url: "https://your-cloud-relay.koyeb.app/api/telemetry"
+  server_token: "CAMBIAR_POR_TOKEN_SECRETO"
+
+sensors:
+  cpu_temp_path: "/sys/class/thermal/thermal_zone0/temp"
+  enable_turbostat: false
+  enable_numastat: true
+
+ai_service:
+  enabled: true
+  type: "ollama" # ollama o llama-cpp
+  url: "http://127.0.0.1:11434"
+  check_endpoint: "/api/ps"
+
+miner_service:
+  enabled: true
+  type: "xmrig"
+  api_url: "http://127.0.0.1:18088"
+  summary_endpoint: "/1/summary"
