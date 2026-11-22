@@ -237,7 +237,9 @@ async function main() {
       const oldWikiSources = sources.filter(
         (s) =>
           typeof s.title === 'string' &&
-          (s.title.startsWith('XEON-NEXUS-SENTINEL-LLM-WIKI') || s.title === MASTER_SOURCE_TITLE)
+          (s.title.startsWith('XEON-NEXUS-SENTINEL-LLM-WIKI') ||
+           s.title === MASTER_SOURCE_TITLE ||
+           s.title.includes('master-wiki-bundle'))
       );
 
       console.log(`📤 Subiendo ${MASTER_SOURCE_TITLE} a Gemini Notebook (${NOTEBOOK_UUID})...`);
