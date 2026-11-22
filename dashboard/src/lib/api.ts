@@ -4,7 +4,7 @@
 
 import { getSessionToken, clearSessionToken } from "./crypto";
 
-const DEFAULT_CLOUD_RELAY_URL = "http://127.0.0.1:8000";
+const DEFAULT_CLOUD_RELAY_URL = "https://xeon-nexus-cloud-relay.onrender.com";
 
 export function getCloudRelayBaseUrl(): string {
   if (typeof window !== "undefined") {

@@ -50,6 +50,17 @@ class LoginResponse(BaseModel):
     expires_in_hours: int = 24
 
 
+@app.get("/")
+def root():
+    """Ruta raíz de bienvenida para evitar 404 en chequeos HTTP de Render."""
+    return {
+        "status": "online",
+        "service": "xeon-nexus-cloud-relay",
+        "health": "/api/health",
+        "docs": "/docs"
+    }
+
+
 @app.get("/api/health")
 def health_check():
     """Health check liviano para keep-alive en Koyeb/Zeabur/Render."""
