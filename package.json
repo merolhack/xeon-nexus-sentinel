@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "clean:zones": "bash scripts/clean-zone-identifiers.sh",
+    "security:scan": "bash scripts/scan-secrets.sh staged",
+    "setup:hooks": "git config core.hooksPath .githooks && chmod +x .githooks/* scripts/*.sh",
     "wiki:sync-notebook": "node scripts/sync-wiki-to-notebook.mjs",
     "wiki:sync-notebook:if-changed": "node scripts/sync-wiki-to-notebook.mjs --if-changed",
     "dashboard:dev": "cd dashboard && npm run dev",

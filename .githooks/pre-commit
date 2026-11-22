@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Git pre-commit hook: Valida la ausencia total de secretos antes de crear un commit.
+REPO_DIR="$(git rev-parse --show-toplevel)"
+cd "${REPO_DIR}"
+
+# 1. Limpieza preventiva de Zone.Identifier
+bash scripts/clean-zone-identifiers.sh >/dev/null 2>&1 || true
+
+# 2. Escaneo de secretos en staged
+bash scripts/scan-secrets.sh staged || {
+  echo "❌ pre-commit bloqueado: se detectaron posibles credenciales en stage."
+  exit 1
+}

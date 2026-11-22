@@ -36,6 +36,7 @@ Bienvenido a la memoria central de **Xeon-Nexus-Sentinel**. Este índice es la r
 * [cpu-inference-tuning.md](file:///wiki/concepts/cpu-inference-tuning.md) — Optimización de inferencia cuantizada (GGUF Q4_K_M) en arquitecturas Intel Xeon legadas sin AVX2.
 * [randomx-cache-isolation.md](file:///wiki/concepts/randomx-cache-isolation.md) — Regla de afinidad y memoria caché L3 (2 MB por hilo) para minería RandomX y gobernanza con IA.
 * [static-client-auth.md](file:///wiki/concepts/static-client-auth.md) — Esquema de autenticación criptográfica en el cliente mediante Web Crypto API y tokens JWT.
+* [secrets-management-and-gitguardian.md](file:///wiki/concepts/secrets-management-and-gitguardian.md) — Gestión segura de credenciales, política de cero secretos y validación con GitGuardian y pre-commit hooks.
 
 ### 3. Entidades de Hardware e Infraestructura (`wiki/entities/`)
 * [hp-server-node.md](file:///wiki/entities/hp-server-node.md) — Servidor empresarial HP ProLiant ML150 G6 en modo headless con AlmaLinux 9 Minimal.
