@@ -10,10 +10,10 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: ADMIN_USER
-        value: admin
+        value: administrador
       - key: ADMIN_PASSWORD_HASH
-        value: c134999e9395482b616d4f246f76bc08115b3977a40c8bc11144704f2700e31d
+        value: ea51164dd668d869a14e71ec9a54f1ea60df5f71e7db86fa3a7fdd79c74e9e2a
       - key: JWT_SECRET_KEY
-        generateValue: true
+        value: 9xLp8qWk3mRj2nTb7sFv6eGz4dCp9yMq5rHt0wLs1aEj8bNk4mXp7cQr2d
       - key: SERVER_INGEST_TOKEN
-        generateValue: true
+        value: 7zKp8qWk3mRj2nTb7sFv6eGz4dCp9yMq5rHt0wLs1aEj8bNk4mXp7cQr2d

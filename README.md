@@ -112,8 +112,8 @@ sudo systemctl enable --now xeon-sentinel.service
 El microservicio `cloud-relay/` puede desplegarse en cualquier servicio que soporte Docker o Python 3.12:
 
 ### Variables de Entorno Requeridas:
-* `ADMIN_USER`: Nombre del usuario administrador (ej. `admin`).
-* `ADMIN_PASSWORD_HASH`: Hash SHA-256 de la contraseña (por defecto: `xeonsentinel2026`).
+* `ADMIN_USER`: Nombre del usuario administrador (por defecto `administrador`).
+* `ADMIN_PASSWORD_HASH`: Hash SHA-256 de la contraseña maestra configurada.
 * `JWT_SECRET_KEY`: Cadena aleatoria segura para firmar los tokens JWT.
 * `SERVER_INGEST_TOKEN`: Token precompartido que el servidor AlmaLinux envía en `X-Server-Token`.
 

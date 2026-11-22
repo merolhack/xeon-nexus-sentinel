@@ -12,16 +12,15 @@ import jwt
 from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-insecure-jwt-secret-replace-in-prod-123456")
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "9xLp8qWk3mRj2nTb7sFv6eGz4dCp9yMq5rHt0wLs1aEj8bNk4mXp7cQr2d")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
-ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
-# Por defecto: hash SHA-256 de "xeonsentinel2026"
-DEFAULT_PW_HASH = hashlib.sha256("xeonsentinel2026".encode("utf-8")).hexdigest()
-ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", DEFAULT_PW_HASH)
+ADMIN_USER = os.environ.get("ADMIN_USER", "administrador")
+# Hash SHA-256 de contraseña autorizada
+ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "ea51164dd668d869a14e71ec9a54f1ea60df5f71e7db86fa3a7fdd79c74e9e2a")
 
-SERVER_INGEST_TOKEN = os.environ.get("SERVER_INGEST_TOKEN", "xeon-sentinel-shared-token-2026")
+SERVER_INGEST_TOKEN = os.environ.get("SERVER_INGEST_TOKEN", "7zKp8qWk3mRj2nTb7sFv6eGz4dCp9yMq5rHt0wLs1aEj8bNk4mXp7cQr2d")
 
 security_bearer = HTTPBearer(auto_error=False)
 

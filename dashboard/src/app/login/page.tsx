@@ -135,7 +135,7 @@ export default function LoginPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
+                placeholder="Usuario administrador"
                 className="w-full bg-darkbg border border-bordercolor rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
               />
             </div>
@@ -178,7 +178,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 pt-4 border-t border-bordercolor/80 text-center text-xs text-gray-500">
-          Credencial predeterminada: <code className="text-gray-400 font-mono">admin</code> / <code className="text-gray-400 font-mono">xeonsentinel2026</code>
+          Autenticación criptográfica protegida con Web Crypto API y tokens JWT
         </div>
       </div>
     </div>
