@@ -1,0 +1,79 @@
+name: Periodic Health & Uptime Audit
+
+on:
+  schedule:
+    # Ejecución periódica cada 12 horas
+    - cron: '0 */12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health-and-security:
+    name: Cloud Relay & GitGuardian Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validar Uptime del Cloud Relay en Render
+        run: |
+          echo "🌐 Verificando estado del Cloud Relay..."
+          RELAY_URL="https://xeon-nexus-cloud-relay.onrender.com/api/health"
+          # Permite tolerar cold start de hasta 60s
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 65 "$RELAY_URL" || true)
+          echo "Respuesta HTTP: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "✅ Cloud Relay está en línea y saludable."
+          else
+            echo "⚠️ Advertencia: Cloud Relay no respondió 200 OK (Código: $HTTP_STATUS). Puede estar en suspensión (sleep)."
+          fi
+
+      - name: Auditar Estado de Secretos en GitGuardian
+        env:
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+        run: |
+          if [ -z "$GITGUARDIAN_API_KEY" ]; then
+            echo "❌ Error: GITGUARDIAN_API_KEY no configurado en GitHub Secrets."
+            exit 1
+          fi
+          echo "🛡️ Consultando incidentes activos en GitGuardian..."
+          python3 - << 'EOF'
+          import os, sys, json, urllib.request
+
+          token = os.environ.get("GITGUARDIAN_API_KEY")
+          url = "https://api.gitguardian.com/v1/incidents/secrets?status=TRIGGERED&per_page=100"
+          req = urllib.request.Request(url, headers={"Authorization": f"Token {token}"})
+
+          try:
+              with urllib.request.urlopen(req, timeout=25) as resp:
+                  data = json.loads(resp.read().decode())
+                  repo_incidents = []
+                  for inc in data:
+                      # Buscar incidentes del repositorio xeon-nexus-sentinel
+                      inc_url = f"https://api.gitguardian.com/v1/incidents/secrets/{inc['id']}"
+                      r_detail = urllib.request.Request(inc_url, headers={"Authorization": f"Token {token}"})
+                      with urllib.request.urlopen(r_detail, timeout=15) as rd:
+                          detail = json.loads(rd.read().decode())
+                          for occ in detail.get("occurrences", []):
+                              src = (occ.get("source", {}).get("full_name") or "").lower()
+                              if "xeon-nexus-sentinel" in src:
+                                  repo_incidents.append(inc["id"])
+                                  break
+
+                  if repo_incidents:
+                      print(f"❌ ALERTA: Se detectaron {len(repo_incidents)} incidentes TRIGGERED activos en GitGuardian:")
+                      for i in repo_incidents:
+                          print(f"  - Incidente #{i}")
+                      sys.exit(1)
+                  else:
+                      print("✅ Auditoría GitGuardian superada: 0 incidentes activos para xeon-nexus-sentinel.")
+          except Exception as e:
+              print(f"⚠️ Error al consultar GitGuardian API: {e}")
+          EOF
