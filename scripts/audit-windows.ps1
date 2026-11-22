@@ -1,4 +1,4 @@
-﻿# Script de auditoría de Windows 11 para Xeon-Nexus-Sentinel
+# Script de auditoría de Windows 11 para Xeon-Nexus-Sentinel
 Write-Host "==================== 1. RED E INTERFACES ====================" -ForegroundColor Cyan
 Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed, MacAddress | Format-Table -AutoSize
 Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notlike "*Loopback*" -and $_.IPAddress -notlike "169.254*" } | Select-Object InterfaceAlias, IPAddress, PrefixLength | Format-Table -AutoSize
