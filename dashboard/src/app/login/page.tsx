@@ -1,15 +1,33 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { hashPasswordSha256, saveSessionToken } from "../../lib/crypto";
-import { loginUser } from "../../lib/api";
-import { Shield, Lock, User, AlertCircle, KeyRound } from "lucide-react";
+import { loginUser, getCloudRelayBaseUrl, setCloudRelayBaseUrl } from "../../lib/api";
+import { Shield, Lock, User, AlertCircle, KeyRound, Settings, Check } from "lucide-react";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [relayUrl, setRelayUrl] = useState("");
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  useEffect(() => {
+    setRelayUrl(getCloudRelayBaseUrl());
+  }, []);
+
+  const handleSaveRelay = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!relayUrl.trim()) return;
+    setCloudRelayBaseUrl(relayUrl.trim());
+    setSavedSuccess(true);
+    setTimeout(() => {
+      setSavedSuccess(false);
+      setShowSettings(false);
+    }, 1200);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +47,14 @@ export default function LoginPage() {
       // Redirigir al dashboard principal
       window.location.href = "../";
     } catch (err: any) {
-      setError(err.message || "Credenciales inválidas o servidor inalcanzable");
+      const currentUrl = getCloudRelayBaseUrl();
+      if (err.message && err.message.includes("Failed to fetch")) {
+        setError(
+          `No se pudo conectar al Cloud Relay en: ${currentUrl}. Asegúrate de que el servicio esté activo y use HTTPS (o configura la URL con el botón de ajustes arriba a la derecha).`
+        );
+      } else {
+        setError(err.message || "Credenciales inválidas o servidor inalcanzable");
+      }
     } finally {
       setLoading(false);
     }
@@ -37,7 +62,17 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#080c14] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-cardbg border border-bordercolor rounded-2xl p-6 sm:p-8 shadow-2xl">
+      <div className="w-full max-w-md bg-cardbg border border-bordercolor rounded-2xl p-6 sm:p-8 shadow-2xl relative">
+        {/* Botón de Ajustes de URL de Relay */}
+        <button
+          type="button"
+          onClick={() => setShowSettings(!showSettings)}
+          className="absolute top-5 right-5 p-2 rounded-lg bg-darkbg border border-bordercolor hover:border-gray-500 text-gray-400 hover:text-white transition"
+          title="Configurar URL del Cloud Relay"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+
         <div className="flex flex-col items-center text-center mb-6">
           <div className="p-3 bg-blue-600/20 text-accent rounded-xl border border-blue-500/30 mb-3">
             <Shield className="w-8 h-8" />
@@ -48,10 +83,43 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Modal / Acordeón de Configuración de Relay */}
+        {showSettings && (
+          <form onSubmit={handleSaveRelay} className="mb-5 p-3.5 bg-darkbg/90 border border-blue-900/60 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-blue-300">URL del Cloud Relay (FastAPI):</label>
+              {savedSuccess && (
+                <span className="text-[11px] text-emerald-400 flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Guardado
+                </span>
+              )}
+            </div>
+            <input
+              type="url"
+              required
+              value={relayUrl}
+              onChange={(e) => setRelayUrl(e.target.value)}
+              placeholder="https://tu-relay.onrender.com"
+              className="w-full bg-[#0b0f19] border border-bordercolor rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-accent font-mono"
+            />
+            <p className="text-[10px] text-gray-400">
+              Usa una URL con <strong>HTTPS</strong> (ej. Render o Koyeb) para evitar bloqueos por contenido mixto en GitHub Pages.
+            </p>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="submit"
+                className="px-3 py-1 bg-accent hover:bg-blue-600 text-white rounded text-xs font-medium transition"
+              >
+                Guardar URL
+              </button>
+            </div>
+          </form>
+        )}
+
         {error && (
-          <div className="mb-4 p-3 bg-red-950/70 border border-red-800 rounded-lg flex items-center gap-2 text-xs text-red-300">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-            <span>{error}</span>
+          <div className="mb-4 p-3 bg-red-950/70 border border-red-800 rounded-lg flex items-start gap-2 text-xs text-red-300">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+            <span className="leading-relaxed">{error}</span>
           </div>
         )}
 

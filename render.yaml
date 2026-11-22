@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: xeon-nexus-cloud-relay
+    runtime: python
+    rootDir: cloud-relay
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASSWORD_HASH
+        value: c134999e9395482b616d4f246f76bc08115b3977a40c8bc11144704f2700e31d
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: SERVER_INGEST_TOKEN
+        generateValue: true
