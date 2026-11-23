@@ -10,13 +10,20 @@ tags: ["pxe", "netboot", "tftp", "http", "ipxe", "kickstart", "almalinux9", "hea
 # Arquitectura de Despliegue Headless PXE Netboot
 
 ## 1. Contexto y Desafio Tecnico
-El servidor **HP ProLiant ML150 G6** es un nodo de computo headless:
-- Sin monitor ni adaptador de video VGA activo.
-- Sin teclado USB externo.
-- Sin unidades flash USB ni lector/quemador de DVD (unicamente CD-R 700 MB).
-- Conectado directamente por cable Ethernet Gigabit cruzado/directo a una laptop con Windows 11.
+El servidor **HP ProLiant ML150 G6** es un nodo de computo empresarial:
+- Controlador de almacenamiento interno: HP Smart Array P410 / SAS-SATA con discos configurados.
+- Sistema operativo preexistente en disco: **Windows Server 2008 R2 Enterprise**.
+- Prioridad de arranque del BIOS: Da preferencia al disco duro interno sobre el arranque por red PXE.
+- Sin monitor ni teclado USB externo conectado directamente al servidor (pantalla verificada por HDMI en TV mediante conversor VGA a HDMI con alimentacion USB).
+- Medios disponibles en laptop: Grabadora externa USB **PHILIPS CDRW/DVD SCB5265 (Unidad E:)** y discos virgenes **CD-R (700 MB)**.
 
-## 2. Topologia de Red y Flujo de Comunicacion
+## 2. Estrategia de Arranque Hibrido: CD-R iPXE + Red Gigabit (PXE/HTTP)
+Dado que la imagen oficial `AlmaLinux-9-boot.iso` pesa 1.55 GB y excede la capacidad fisica de un CD-R (700 MB maximo, requiere DVD):
+1. Se emplea **iPXE ISO (`ipxe.iso`, ~9 MB)** grabada en el CD-R.
+2. El BIOS del HP ProLiant ML150 G6 prioriza de fabrica la unidad lectora frontal DVD/CD sobre los discos duros internos.
+3. El CD-R arranca iPXE en menos de 2 segundos sin requerir intervencion de teclado.
+4. iPXE se comunica por el puerto inferior Gigabit (`1/Mgmt`) con el servidor autonomo en la laptop (`192.168.137.1:8000`).
+5. Descarga `vmlinuz` (14.62 MB) e `initrd.img` (218.16 MB) por HTTP a 1 Gbps e inicia la instalacion desatendida via Kickstart (`ks.cfg`).
 
 ```text
 [ Laptop Windows 11 ] (Gateway: 192.168.137.1)

@@ -176,23 +176,39 @@ class DHCPServer:
     def __init__(self, server_ip=SERVER_IP, assigned_ip=IP_POOL_START):
         self.server_ip = server_ip
         self.assigned_ip = assigned_ip
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self.sockets = []
+        # Escuchar tanto en puerto 67 (DHCP estandar) como en 4011 (ProxyDHCP para PXE)
+        for ip in [server_ip, "0.0.0.0"]:
+            for port in [67, 4011]:
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                    s.bind((ip, port))
+                    self.sockets.append((s, ip, port))
+                except Exception as e:
+                    pass
 
     def start(self):
-        # Escuchar en puerto 67
-        self.sock.bind(("0.0.0.0", 67))
-        print(f"[DHCP] Servidor DHCP/ProxyDHCP activo en 0.0.0.0:67 (Server IP: {self.server_ip})")
+        print(f"[DHCP] Servidor DHCP/ProxyDHCP escuchando en {len(self.sockets)} endpoints (67 y 4011)", flush=True)
+        threads = []
+        for s, ip, port in self.sockets:
+            t = threading.Thread(target=self.listen_socket, args=(s, ip, port), daemon=True)
+            t.start()
+            threads.append(t)
+        for t in threads:
+            t.join()
+
+    def listen_socket(self, sock, ip, port):
+        print(f"[DHCP] Escuchando activamente en {ip}:{port}", flush=True)
         while True:
             try:
-                data, addr = self.sock.recvfrom(4096)
-                threading.Thread(target=self.handle_dhcp, args=(data, addr), daemon=True).start()
+                data, addr = sock.recvfrom(4096)
+                threading.Thread(target=self.handle_dhcp, args=(data, addr, sock), daemon=True).start()
             except Exception as e:
-                print(f"[DHCP] Error en socket: {e}")
                 break
 
-    def handle_dhcp(self, data, addr):
+    def handle_dhcp(self, data, addr, sock):
         if len(data) < 240:
             return
         op, htype, hlen, hops, xid = struct.unpack("!BBBBI", data[:8])
@@ -234,13 +250,13 @@ class DHCPServer:
             client_type = "BIOS PXE ROM"
 
         if msg_type == 1:  # DHCP DISCOVER
-            print(f"[DHCP] DISCOVER recibido de MAC {mac_str} ({client_type})")
-            self.send_offer(xid, chaddr, boot_file, addr, is_ipxe)
+            print(f"[DHCP] DISCOVER recibido de MAC {mac_str} ({client_type}) en puerto {sock.getsockname()[1]}")
+            self.send_offer(xid, chaddr, boot_file, addr, is_ipxe, sock)
         elif msg_type == 3:  # DHCP REQUEST
-            print(f"[DHCP] REQUEST recibido de MAC {mac_str} ({client_type})")
-            self.send_ack(xid, chaddr, boot_file, addr, is_ipxe)
+            print(f"[DHCP] REQUEST recibido de MAC {mac_str} ({client_type}) en puerto {sock.getsockname()[1]}")
+            self.send_ack(xid, chaddr, boot_file, addr, is_ipxe, sock)
 
-    def send_offer(self, xid, chaddr, boot_file, addr, is_ipxe):
+    def send_offer(self, xid, chaddr, boot_file, addr, is_ipxe, sock):
         # Construir DHCPOFFER
         yiaddr = ip_to_bytes(self.assigned_ip)
         siaddr = ip_to_bytes(self.server_ip)
@@ -281,10 +297,10 @@ class DHCPServer:
 
         pkt = hdr + cookie + bytes(opts)
         dest = ("255.255.255.255", 68)
-        self.sock.sendto(pkt, dest)
+        sock.sendto(pkt, dest)
         print(f"[DHCP] Enviado DHCPOFFER -> {self.assigned_ip} (Bootfile: {boot_file.decode('ascii')})")
 
-    def send_ack(self, xid, chaddr, boot_file, addr, is_ipxe):
+    def send_ack(self, xid, chaddr, boot_file, addr, is_ipxe, sock):
         yiaddr = ip_to_bytes(self.assigned_ip)
         siaddr = ip_to_bytes(self.server_ip)
 
@@ -319,7 +335,7 @@ class DHCPServer:
 
         pkt = hdr + cookie + bytes(opts)
         dest = ("255.255.255.255", 68)
-        self.sock.sendto(pkt, dest)
+        sock.sendto(pkt, dest)
         print(f"[DHCP] Enviado DHCPACK -> {self.assigned_ip} (Bootfile: {boot_file.decode('ascii')})")
 
 
