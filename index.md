@@ -31,6 +31,7 @@ Bienvenido a la memoria central de **Xeon-Nexus-Sentinel**. Este índice es la r
 * [almalinux-daemon.md](file:///wiki/systems/almalinux-daemon.md) — Agente en Python para recolección de telemetría de hardware y estado de procesos.
 * [cloud-relay-api.md](file:///wiki/systems/cloud-relay-api.md) — Microservicio FastAPI para ingestión de telemetría y emisión de tokens de acceso en nubes gratuitas.
 * [nextjs-dashboard.md](file:///wiki/systems/nextjs-dashboard.md) — Frontend estático exportado para GitHub Pages con panel interactivo y gráficos en tiempo real.
+* [headless-pxe-netboot.md](file:///wiki/systems/headless-pxe-netboot.md) — Servidor PXE/TFTP/HTTP autónomo y pipeline de despliegue desatendido para servidores sin monitor ni teclado.
 
 ### 2. Conceptos y Protocolos de Ingeniería (`wiki/concepts/`)
 * [cpu-inference-tuning.md](file:///wiki/concepts/cpu-inference-tuning.md) — Optimización de inferencia cuantizada (GGUF Q4_K_M) en arquitecturas Intel Xeon legadas sin AVX2.
