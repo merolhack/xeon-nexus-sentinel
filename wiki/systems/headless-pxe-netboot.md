@@ -2,7 +2,7 @@
 title: "Arquitectura de Despliegue Headless PXE Netboot para HP ProLiant ML150 G6"
 description: "Servidor PXE/TFTP/HTTP autonomo en Python para instalacion desatendida de AlmaLinux 9 en servidores sin monitor ni teclado."
 category: "systems"
-date: "2026-11-22"
+date: "2026-11-23"
 status: "active"
 tags: ["pxe", "netboot", "tftp", "http", "ipxe", "kickstart", "almalinux9", "headless"]
 ---
@@ -56,3 +56,50 @@ Para evitar que el cliente iPXE descargue cíclicamente su propio binario en ent
 - Contraseña de root preconfigurada (`rootpw --plaintext nexusadmin2026!`).
 - SSH habilitado automáticamente (`services --enabled="sshd"`).
 - Reinicio automático al terminar (`reboot`).
+
+## 5. Pruebas de Diagnóstico y Resultados de Campo con el Servidor (Noviembre 2026)
+
+Durante las sesiones de laboratorio y pruebas en vivo con el HP ProLiant ML150 G6 se ejecutaron y validaron los siguientes componentes:
+
+### 5.1 Diagnóstico de Video y Descubrimiento del Estado del Servidor
+- **Prueba:** Conexión del puerto VGA trasero hacia TV mediante adaptador activo VGA a HDMI.
+- **Resultado:** El convertidor activo requería alimentación externa de 5V micro-USB para energizar el circuito analógico-digital. Al energizarlo por USB, la señal de video apareció de forma inmediata.
+- **Hallazgo:** La pantalla reveló que el servidor tiene preinstalado **Windows Server 2008 R2 Enterprise** en un arreglo SAS RAID administrado por la controladora **HP Smart Array P410**.
+
+### 5.2 Pruebas de Red y Sondeo DHCP/ICS
+- **Entorno:** Conexión compartida a Internet (ICS) en Windows 11 sobre el segmento `192.168.137.0/24` (laptop como Gateway en `192.168.137.1`).
+- **Scripts de Diagnóstico con Timeouts Estrictos (Mandato 6):**
+  - `scripts/scan-ics-range.ps1`: Escaneo paralelo de direcciones IP en la subred ICS.
+  - `scripts/detect-ilo.ps1`: Sondeo de puertos HTTP (80) y HTTPS (443) para identificar la interfaz HP iLO 100i con timeout de 2 segundos por nodo.
+  - `scripts/monitor-hp-ip.ps1`: Monitoreo continuo de solicitudes ARP y asignaciones de IP para el servidor.
+  - `scripts/check-dhcp-leases.ps1`: Inspección de concesiones de red emitidas por ICS.
+  - `scripts/sniff-broadcasts.ps1` y `scripts/sniff-ports.ps1`: Captura no bloqueante de tramas DHCP UDP 67/68 y TFTP UDP 69.
+- **Conclusión de Red:** El servidor físico no realizaba broadcast DHCP PXE durante el encendido debido a que la secuencia de arranque del BIOS priorizaba el disco duro interno Smart Array P410.
+
+### 5.3 Implementación y Verificación del Servidor PXE Autónomo
+- **Componente:** `scripts/headless_pxe_server.py` implementado en Python estándar sin dependencias externas pesadas.
+- **Servicios Integrados:**
+  - Servidor DHCP/ProxyDHCP en puerto UDP 67.
+  - Servidor TFTP en puerto UDP 69 sirviendo `undionly.kpxe`.
+  - Servidor HTTP en puerto TCP 8000 sirviendo `boot.ipxe`, `ks.cfg`, `vmlinuz` (14.62 MB) e `initrd.img` (218.16 MB).
+- **Control de Bucle:** Discriminación de Opción 175 verificada para entrega directa del script de arranque HTTP al detectar clientes iPXE.
+- **Lanzador Rápido:** Creación de `iniciar-servidor-pxe.bat` para ejecución en Windows 11 con elevación de privilegios de red.
+
+### 5.4 Grabación Desatendida de iPXE en CD-R
+- **Desafío:** Imposibilidad de grabar el ISO completo de AlmaLinux 9 (1.55 GB) en un CD-R virgen (700 MB) y ausencia de teclado físico USB conectado al servidor para cambiar el orden de arranque en el BIOS.
+- **Solución:** Grabación de la imagen ultraligera `ipxe.iso` (9 MB) en CD-R.
+- **Herramienta:** Creación de `scripts/burn-iso.ps1`, automatizando `C:\Windows\System32\isoburn.exe /Q E: C:\Users\lenin\pxeboot\ipxe.iso` sobre la unidad óptica externa PHILIPS CDRW/DVD SCB5265 (Unidad E:).
+- **Resultado:** Grabación de pistas finalizada exitosamente con código de salida 0, lista para ser leída por la lectora frontal del servidor y conectar por Gigabit al servidor PXE de la laptop.
+
+### 5.5 Diagnóstico de Beeps del BIOS, Arreglo SAS y Estrategia Cero-Teclado
+- **Comportamiento con Discos Extraídos (2 Beeps Cortos):**
+  - Al extraer las dos charolas de discos SAS frontales hacia afuera para evitar el inicio de Windows Server, la controladora Smart Array P410 emitió 2 beeps cortos y pausó el POST en la advertencia `1785-Slot X Drive Array - Drive(s) Not Detected (Press F1 to continue)`.
+  - Sin teclado físico conectado, el servidor se mantuvo esperando confirmación, manteniendo los ventiladores y LEDs de estado en verde.
+- **Comportamiento con Discos Reinsertados (1 Beep Corto):**
+  - Al reinsertar y bloquear las dos charolas de discos SAS (450 GB 15K RPM HP Spare 517352-001) y reiniciar, el servidor emitió un único beep corto (POST exitoso y saludable).
+  - El BIOS dio paso al cargador de arranque en disco, mostrando la pantalla de recuperación "Iniciar Windows normalmente" y continuando hacia "Aplicando la configuración del equipo".
+  - Durante esta fase se confirmó el enlace físico Gigabit activo en la laptop (`Ethernet` Realtek GbE) con incremento de bytes recibidos (+31 KB).
+- **Estrategia Headless sin Teclado (Ratón USB + Accesibilidad + Diskpart Clean):**
+  - El servidor opera bajo la restricción estricta de **cero teclado físico**.
+  - Se cuenta con un ratón USB conectado a los puertos frontales. A través del menú de Accesibilidad en la pantalla de bienvenida de Windows Server, se activa el Teclado en Pantalla (`osk.exe`) para enviar `Ctrl+Alt+Supr`.
+  - En la siguiente sesión, desde Windows o la consola de recuperación WinRE, se ejecutará `diskpart -> select disk 0 -> clean` para borrar la tabla MBR de Windows Server. Al quedar el disco sin cargador pero físicamente presente y saludable, la Smart Array no dará error y el BIOS caerá automáticamente hacia el CD-R de iPXE o PXE Netboot para la instalación desatendida de AlmaLinux 9.

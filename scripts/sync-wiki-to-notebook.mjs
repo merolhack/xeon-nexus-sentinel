@@ -50,6 +50,7 @@ function collectWikiFiles() {
       if (entry.isDirectory()) {
         scanDir(full, `${relPrefix}/${entry.name}`);
       } else if (entry.name.endsWith('.md')) {
+        if (entry.name === 'master-wiki-bundle.md') continue;
         ordered.push({ rel: `${relPrefix}/${entry.name}`, full });
       }
     }
@@ -209,6 +210,9 @@ class McpStdioClient {
 async function main() {
   const bundle = buildMasterWikiBundle();
   console.log(`📚 Compilados ${bundle.fileCount} archivos de la LLM Wiki (${bundle.content.length} caracteres, SHA-256: ${bundle.sha256.slice(0, 12)}...)`);
+
+  // Actualizar copia local compilada de la Wiki
+  fs.writeFileSync(path.join(WIKI_DIR, 'master-wiki-bundle.md'), bundle.content, 'utf8');
 
   if (ifChangedOnly && !hasGitWikiChanges(bundle.sha256) && !askQuestionText) {
     console.log('✅ El hash SHA-256 coincide con el último estado sincronizado. Saltando subida.');
