@@ -33,6 +33,11 @@ Este documento establece las **reglas estrictas y de cumplimiento obligatorio** 
 >      `https://notebook.google.com/notebook/1bd607be-628c-4228-a1f5-5b4f5dd59093` (ID de biblioteca: `xeon-nexus-sentinel`).
 >    - Tras cualquier modificación en la wiki, arquitectura o código clave, el agente DEBE sincronizar el compendio maestro con Gemini Notebook ejecutando `npm run wiki:sync-notebook` o utilizando las herramientas MCP de `notebooklm-mcp` (`add_source`).
 >    - El agente DEBE solicitar confirmación explícita al usuario para verificar la actualización en el cuaderno y presentar el resumen de los cambios sincronizados.
+>
+> 6. **Prevención de Bloqueos por Timeout (Anti-Hang y Timeouts Estrictos):**
+>    - Queda terminantemente prohibido ejecutar comandos de red, pruebas de conectividad o descargas (`curl`, `Invoke-WebRequest`, sockets, escaneos de puertos) sin un timeout explícito y corto (máximo 5 a 10 segundos, ej: `curl --max-time 10`, `-TimeoutSec 5`).
+>    - Prohibido enviar comandos de sondeo simple o verificación ligera a tareas en segundo plano sin guardia de tiempo; procesos colgados sin timeout congelan la sesión del agente por decenas de minutos.
+>    - Toda verificación de red debe ejecutarse de forma acotada y si un endpoint no responde en 5 segundos, abortar de inmediato y continuar el flujo sin bloquear al usuario.
 
 ---
 
