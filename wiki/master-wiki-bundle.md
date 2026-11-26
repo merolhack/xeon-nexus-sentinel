@@ -1,9 +1,9 @@
 # XEON-NEXUS-SENTINEL-LLM-WIKI-MASTER.md — Compendio Maestro de Conocimiento Xeon-Nexus-Sentinel
 - **Notebook URL:** https://notebook.google.com/notebook/1bd607be-628c-4228-a1f5-5b4f5dd59093
 - **Arquitectura:** Google OKF v0.2 + Karpathy 3-Layer LLM Wiki (`raw/`, `wiki/`, `SPEC.md`)
-- **Archivos Compilados:** 22
-- **SHA-256:** `4a7d9550380120371b83b1307b32e83a2e3ec0d793e84120a0a431526e8bd36e`
-- **Fecha de Compilación:** 2026-11-26T17:20:33.993Z
+- **Archivos Compilados:** 23
+- **SHA-256:** `a17681bb4201a671914e1f210b29af6f8ee6d1351e3d627d89679512987be9ca`
+- **Fecha de Compilación:** 2026-11-26T18:47:54.241Z
 
 
 ================================================================================
@@ -209,6 +209,7 @@ Bienvenido a la memoria central de **Xeon-Nexus-Sentinel**. Este índice es la r
 * [execution-timeouts-and-anti-hang-patterns.md](file:///wiki/concepts/execution-timeouts-and-anti-hang-patterns.md) — Políticas estrictas de timeout y patrones anti-bloqueo en comandos de red y diagnóstico del agente.
 * [strata-vs-ollama-inference.md](file:///wiki/concepts/strata-vs-ollama-inference.md) — Análisis arquitectónico de Strata Frameworks (MoE Qwen3.8/GLM), jerarquía de memoria y viabilidad frente a Ollama en CPU Xeon Nehalem.
 * [server-memory-and-bios-governance.md](file:///wiki/concepts/server-memory-and-bios-governance.md) — Gobernanza de memoria DDR3 ECC (RDIMM vs UDIMM), reglas de coexistencia y configuración de arranque en BIOS y Smart Array P410.
+* [headless-boot-diagnostics-and-telemetry.md](file:///wiki/concepts/headless-boot-diagnostics-and-telemetry.md) — Diagnóstico de arranque sin monitor, telemetría de capa física PHY (100M/1G) y automatización de inicio iPXE (sanboot).
 
 ### 3. Entidades de Hardware e Infraestructura (`wiki/entities/`)
 * [hp-server-node.md](file:///wiki/entities/hp-server-node.md) — Servidor empresarial HP ProLiant ML150 G6 en modo headless con AlmaLinux 9 Minimal.
@@ -589,6 +590,13 @@ Durante las sesiones de laboratorio y pruebas en vivo con el HP ProLiant ML150 G
   - Activación del framebuffer de consola Matrox G200e (`mgag200drmfb`) en resolución de 128×48 caracteres.
   - Transferencia ininterrumpida de más de 1.4 GB de paquetes RPM base mediante la conexión compartida ICS de la laptop a velocidades de ~12 MB/s, procediendo al particionado desatendido del arreglo Smart Array P410 (`/dev/sda`).
 
+### 5.9 Despacho de Arranque Multi-Opción con Fallback a Disco SAS (`sanboot 0x80`)
+- **Desafío:** Pérdida recurrente de configuración en NVRAM del BIOS (batería CR2032 agotada) que revierte el equipo a los valores de fábrica de 2011, provocando bucles si el usuario no interviene en menos de 1 segundo en el menú BBS.
+- **Solución iPXE:** Transformación de `boot.ipxe` en un menú selectivo con timeout de 3 segundos:
+  - Opción por defecto: `sanboot --no-describe --drive 0x80` (ejecuta INT 13h directo sobre el MBR de la controladora Smart Array P410).
+  - Opciones secundarias: Modo Rescate de Linux por red (`inst.rescue`) y Reinstalación desatendida Kickstart (`:reinstall`).
+- **Resguardo y Versionado Oficial:** Copia de respaldo en `boot.ipxe.installer-backup` e incorporación de toda la suite de arranque (`headless_pxe_server.py`, `ks.cfg`, `boot.ipxe`) dentro del repositorio rastreado por Git en `server/pxe/` (Commit `39d8342`).
+
 
 ================================================================================
 # FILE: wiki/concepts/execution-timeouts-and-anti-hang-patterns.md
@@ -910,6 +918,106 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\gdrive-backup.ps1 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\gdrive-backup.ps1 -SourcePath "C:\Users\lenin\Documents" -Action Copy
 ```
+
+
+================================================================================
+# FILE: wiki/concepts/headless-boot-diagnostics-and-telemetry.md
+================================================================================
+
+---
+type: concept
+title: "Diagnóstico de Arranque Headless, Telemetría de Capa de Enlace y Automatización de iPXE"
+description: "Patrones de diagnóstico sin monitor para servidores legados con fallas de sincronismo de vídeo, telemetría por velocidad de enlace PHY (100M/1G) y arranque asistido por iPXE"
+tags: [headless, pxe, ipxe, telemetry, matrox-g200, diagnostics, sanboot, cr2032, bios]
+created: 2026-11-26
+updated: 2026-11-26
+---
+
+# Diagnóstico de Arranque Headless, Telemetría de Capa de Enlace y Automatización de iPXE
+
+Este documento compendia las técnicas avanzadas de telemetría de red, monitoreo de estados de hardware sin monitor y automatización de arranque diseñadas para operar con el nodo servidor **HP ProLiant ML150 G6** cuando la salida de vídeo analógica (Matrox G200e + conversor activo VGA-HDMI) es inestable o efímera.
+
+---
+
+## 1. El Desafío Físico: Cegueras Visuales en Hardware Legado
+
+En servidores empresariales torre de generación G6/G7 (2009-2011), el monitoreo visual tradicional mediante monitores HDMI comerciales falla por tres razones físicas:
+1. **Pérdida de Sincronismo del DAC Analógico:** El chip gráfico integrado **Matrox G200e** altera repetidamente sus frecuencias de refresco horizontal y vertical al conmutar entre el logotipo gráfico inicial (640×480 @ 60Hz), el modo texto del BIOS AMI (720×400 @ 70Hz), las Option ROMs de controladoras PCIe y el framebuffer del kernel Linux (`mgag200drmfb`).
+2. **Desconexión del Conversor Activo VGA-HDMI:** Los conversores analógico-digitales comerciales pierden el enganche de fase (Phase-Locked Loop / PLL) ante transiciones de vídeo de menos de 500 ms, provocando que los televisores modernos (como LG) entren en modo de ahorro de energía (*"No signal / Power Saving Mode"*).
+3. **Brevedad de Mensajes Críticos en Pantalla:** Avisos como `Press <ESC> to boot....1` duran exactamente un segundo antes de que la BIOS tome la decisión de arranque por defecto, haciendo humanamente imposible la verificación o captura visual interactiva.
+
+---
+
+## 2. Telemetría de Capa de Enlace (L2/PHY) como Monitor de Estado
+
+Ante la ausencia de vídeo, el estado del hardware del servidor se infiere con precisión milimétrica analizando la velocidad de enlace (*LinkSpeed*) y el tráfico de tramas en la tarjeta de red Gigabit integrada (HP NC107i / Broadcom BCM5723):
+
+```text
+[Servidor Apagado / Standby]  ---> Link: Desconectado o 10 Mbps (solo BMC/iLO si está energizado)
+[POST de BIOS / Setup F10]    ---> Link: 100 Mbps (Broadcom PHY en modo ahorro/compatibilidad BIOS)
+[Option ROM Broadcom MBA]     ---> Link: 100 Mbps o 1 Gbps (Peticiones DHCP DISCOVER en puerto UDP 67)
+[Kernel Linux / Driver tg3]   ---> Link: 1 Gbps (Negociación Full Duplex Gigabit 1000 Mbps)
+```
+
+### Regla Diagnóstica de Transición de Velocidad:
+* **Si el enlace salta de 100 Mbps a 1 Gbps:** Significa inequívocamente que el hardware del servidor superó el POST y el kernel de Linux (o el firmware avanzado de red) tomó el control del bus PCI Express e inicializó el controlador `tg3`. La falta de imagen es 100% atribuible al conversor de vídeo.
+* **Si el enlace permanece en 100 Mbps indefinidamente:** El servidor continúa en la fase de BIOS o se encuentra en pausa por advertencia interactiva (`Press <F1> to continue` o `Press <ESC> to boot`).
+
+---
+
+## 3. Resiliencia Ante la Pérdida de NVRAM/CMOS (Batería CR2032)
+
+Cuando la batería de litio CR2032 de la placa base se encuentra agotada (0.0 V):
+1. **Microcaída de Tensión en Reinicio:** Durante un reinicio por software (*warm reset*), la línea de voltaje principal cae temporalmente para resetear el Southbridge (ICH10R). Sin la batería de 3V para sostener los registros CMOS, se genera un error de suma de verificación (*CMOS Checksum Bad*) y la placa carga los valores por defecto de fábrica de 2011.
+2. **Estrategia de Mitigación por Red (Fallback de Fábrica):**
+   * En los valores de fábrica, la BIOS del ML150 G6 busca unidades ópticas y luego ejecuta de forma obligatoria el arranque por red **PXE (`Network:MBA`)**.
+   * Esto permite utilizar la laptop como un **orquestador maestro de rescate** que no depende de la memoria de la placa base.
+
+---
+
+## 4. Arquitectura de Arranque Automatizado con iPXE (`sanboot 0x80`)
+
+Para garantizar que el servidor siempre cargue AlmaLinux 9 instalado en los discos duros SAS de la controladora Smart Array P410 sin importar la pérdida de configuración del BIOS, el script `boot.ipxe` en la laptop implementa un despachador inteligente:
+
+```ipxe
+#!ipxe
+set menu-timeout 3000
+set submenu-timeout ${menu-timeout}
+
+:start
+menu Xeon Nexus Sentinel - Menu de Inicio Automatizado
+item --default --key s local_sas  [S] Arrancar AlmaLinux 9 desde Disco SAS Local (0x80)
+item --key r rescue_boot          [R] Arrancar Modo Rescate de Linux por Red
+item --key i reinstall            [I] Reinstalar AlmaLinux 9 (Kickstart Automatico)
+choose --timeout ${menu-timeout} --default local_sas target && goto ${target}
+
+:local_sas
+echo Arrancando AlmaLinux 9 desde disco SAS local (0x80)...
+sanboot --no-describe --drive 0x80 || goto fallback_exit
+
+:fallback_exit
+echo [AVISO] sanboot fallo o no respondio. Saliendo de iPXE...
+exit 1
+```
+
+### Mecánica de Ejecución:
+1. El servidor arranca por PXE y descarga `undionly.kpxe` vía TFTP.
+2. iPXE ejecuta `boot.ipxe` por HTTP local (puerto 8000).
+3. Tras una cuenta regresiva de 3 segundos, `sanboot --no-describe --drive 0x80` invoca directamente la interrupción BIOS INT 13h sobre el dispositivo `0x80` (el arreglo RAID 1 de 419 GB de la Smart Array P410).
+4. El MBR de AlmaLinux 9 toma el control y carga el sistema operativo de forma desatendida.
+
+---
+
+## 5. Matriz de Scripts de Diagnóstico Robusto (Suite Headless)
+
+Para diagnosticar sin depender de la salida de vídeo, se establecen cuatro monitores automáticos en la estación de control:
+
+| Script | Propósito | Detección Clave |
+| :--- | :--- | :--- |
+| `monitor-link-speed.ps1` | Monitorea la velocidad de enlace físico (100M vs 1G). | Distingue entre estado BIOS (100M) y estado Linux Kernel (1G). |
+| `sniff-dhcp-traffic.py` | Escucha pasiva de tramas DHCP DISCOVER/REQUEST en puerto 67 UDP. | Identifica si el servidor está en fase de arranque PXE ROM o de cliente OS. |
+| `scan-active-ssh.py` | Barrido asíncrono con timeout corto (0.3 s) sobre subred `192.168.137.0/24`. | Detecta la apertura inmediata del puerto 22 SSH al terminar el boot. |
+| `recover-vga-hdmi.bat` | Reseteo por software de alimentación de concentradores USB vinculados al conversor. | Fuerza el reenganche de fase analógica en pantallas externas. |
 
 
 ================================================================================
@@ -1545,6 +1653,7 @@ Registro cronológico acumulativo (append-only) de decisiones de diseño, tareas
 23. **Arranque de Kernel Linux, Framebuffer Matrox G200e, Resolución de Error SSL y Despliegue de BaseOS:** Inicio exitoso de AlmaLinux 9 vía iPXE Netboot desatendido sin teclado ni USB. Detección completa del subsistema de almacenamiento SCSI Smart Array P410 como `/dev/sda` (discos SAS 450 GB 15K RPM), unidad óptica `hp DVDROM DH40N` y enlace Gigabit a 1000 Mbps Full Duplex (`tg3` en `enp4s0`). Inicialización del framebuffer nativo `mgag200` en consola 128×48 caracteres recuperando señal de vídeo estable en la TV LG. Detección y resolución del fallo de validación de certificados SSL (`curl: 60 certificate is not yet valid`) provocado por el reloj del BIOS en 2011 (`01/18/2011`), subsanado mediante redirección de repositorios a HTTP plano (`http://repo.almalinux.org/...`) y switches `inst.noverifyssl` y `--noverifyssl`. Transferencia exitosa de más de 1.4 GB de paquetes RPM base mediante ICS e inicio del particionado automatizado Kickstart. Consulta especializada a Gemini Notebook respecto a esquema óptimo de particionado y sistema de archivos (XFS vs ext4) para cargas de servidor, IA local y minería.
 24. **Conclusión de Instalación de AlmaLinux 9, Reinicio de Servidor e Investigación Arquitectónica de Strata:** Finalización de la instalación automatizada Kickstart transfiriendo más de 2.48 GB de paquetes RPM a través del enlace Gigabit y reinicio autónomo del servidor HP ProLiant ML150 G6. Detección de re-intentos de red PXE debido a la configuración de BIOS previa (`Hard Drive Disabled`). Formulación del procedimiento interactivo de BIOS para fijar `1st Boot Device [Hard Drive]` con Smart Array P410. Investigación exhaustiva en Gemini Notebook a partir de nuevas fuentes sobre el motor de inferencia Strata (`Niko1221/Strata`, `Strata-GLM`): análisis de jerarquía de memoria en 3 niveles (VRAM GPU, Arena de RAM anclada y Page Cache en NVMe para tabla n-gram), aceleración MTP y evaluación comparativa frente a Ollama / `llama.cpp`. Identificación de barreras de hardware en el nodo Xeon E5504 (carencia de AVX/AVX2, 8 GB de RAM vs 32–64 GB exigidos por Strata para MoE 125B y discos mecánicos SAS vs NVMe), confirmando a `llama.cpp` SSE4.2 como la solución óptima actual para modelos compactos de 1B a 3B y definiendo la hoja de ruta de ampliación a 48 GB de RAM y GPU PCIe para adopción futura de Strata.
 25. **Gobernanza de Memoria RAM DDR3 ECC (RDIMM vs UDIMM), Aislamiento de Hardware y Diagnóstico de Arranque BIOS/Smart Array:** Análisis exhaustivo de los módulos de memoria del servidor tras la intervención del usuario. Esclarecimiento del inventario real: 2 módulos adquiridos Micron 4 GB `PC3-10600R` (`MT36JBZS51272PY`, Registered ECC RDIMM de grado servidor genuino) frente a 3 módulos preexistentes heredados del chasis (2× Nanya 4GB + 1× Samsung 2GB `PC3-10600E` UDIMM Unbuffered ECC). Demostración técnica de la incompatibilidad absoluta impuesta por el código de referencia de memoria (MRC) de Intel y la BIOS AMI del HP ProLiant ML150 G6, que prohíbe terminantemente la coexistencia de RDIMM y UDIMM en la misma placa base o entre diferentes sockets en configuraciones de doble procesador. Validación de la compra en MercadoLibre como la elección correcta y formulación de la directiva de expansión futura (adquisición exclusiva de módulos RDIMM `PC3-10600R` para alcanzar 24 GB o 48 GB). Diagnóstico del síntoma "Sin señal" y bloqueo aparente de arranque: detección de la pausa obligatoria de la BIOS por cambio de capacidad de RAM (`Memory size changed, Press F1`), desincronización de frecuencia del conversor VGA-HDMI con el chip gráfico Matrox G200e y formulación de los ajustes de firmware críticos (`Quick Boot [Disabled]` para permitir la inicialización de discos SAS 15K RPM y `Select Boot Volume` en la Option ROM F8 de la Smart Array P410). Creación del documento modular `wiki/concepts/server-memory-and-bios-governance.md` y actualización integral de `wiki/entities/hp-server-node.md` e `index.md`.
+26. **Automatización de Arranque iPXE (sanboot 0x80), Telemetría de Capa de Enlace (100M/1G) y Resguardo de Herramientas de Despliegue:** Diagnóstico de la pérdida de configuración de NVRAM en cada reinicio provocado por el agotamiento total de la batería CR2032 (0V), donde la microcaída transitoria de voltaje durante el warm reset del Southbridge ICH10R corrompe la CMOS y fuerza a la placa a cargar los valores por defecto de 2011. Identificación en firmware AMI del prompt efímero de 1 segundo `Press <ESC> to boot....1` sobre la enumeración de dispositivos PCI (`PCIE Slot- 4 RAID.IRQ10`, `PCIE Bridge Ethernet.IRQ5`). Formulación e implementación de la Estrategia 1 de rescate autónomo: reconfiguración de `boot.ipxe` con un menú selectivo y cuenta regresiva de 3 segundos que ejecuta por defecto `sanboot --no-describe --drive 0x80` para ceder el control directo al MBR de la controladora Smart Array P410 sin depender de la memoria de la placa. Descubrimiento y formulación de la telemetría de capa de enlace (L2/PHY): la transición de velocidad de enlace en la laptop de 100 Mbps (modo BIOS/Standby) a 1 Gbps (driver Linux `tg3`) como indicador inequívoco del estado del kernel sin depender del vídeo. Resguardo redundante: creación de `boot.ipxe.installer-backup`, incorporación de toda la suite en `server/pxe/` y commit formal en Git (`39d8342`). Creación de `wiki/concepts/headless-boot-diagnostics-and-telemetry.md`, actualización de `wiki/systems/headless-pxe-netboot.md` e `index.md`.
 
 
 
