@@ -140,3 +140,14 @@ Durante las sesiones de laboratorio y pruebas en vivo con el HP ProLiant ML150 G
   - Opción por defecto: `sanboot --no-describe --drive 0x80` (ejecuta INT 13h directo sobre el MBR de la controladora Smart Array P410).
   - Opciones secundarias: Modo Rescate de Linux por red (`inst.rescue`) y Reinstalación desatendida Kickstart (`:reinstall`).
 - **Resguardo y Versionado Oficial:** Copia de respaldo en `boot.ipxe.installer-backup` e incorporación de toda la suite de arranque (`headless_pxe_server.py`, `ks.cfg`, `boot.ipxe`) dentro del repositorio rastreado por Git en `server/pxe/` (Commit `39d8342`).
+
+### 5.10 Vía B: Arquitectura de Red de Dos Fases (inst.stage2) y Mitigación de Triple Fault
+- **Diagnóstico del Reinicio Temprano (Triple Fault en Modo Real BIOS):**
+  - Durante las pruebas con los 8 GB RDIMM Micron estabilizados, la transferencia por red de `vmlinuz` (15 MB) e `initrd.img` (228 MB) culminó en exactamente 5 segundos a 1 Gbps (243 MB entregados).
+  - Sin embargo, a los 35-45 segundos el servidor experimentó un reinicio automático de hardware.
+  - Causa Raíz 1: En los kernels modernos de RHEL 9 / AlmaLinux 9 (Linux 5.14+), el parámetro heredado de 16 bits `vga=normal` se encuentra completamente deprecado; al intentar invocar la llamada de selector de vídeo de BIOS en modo real, el kernel falla y dispara una excepción de CPU.
+  - Causa Raíz 2: La BIOS AMI 2011 opera en modo real de 16-bit al despachar llamadas iPXE/UNDI; la descompresión en memoria contigua de un ramdisk de 228 MB (que en memoria alcanza 700+ MB) colisiona con el área EBDA y buffers de la Smart Array P410.
+- **Implementación de la Vía B (Arranque Desatendido 100% Red Oficial):**
+  - **Parámetro Obligatorio `inst.stage2`:** Se sustituye `inst.repo` por `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os`, permitiendo a Dracut montar dinámicamente el entorno de Anaconda por streaming HTTP sin saturar la memoria baja.
+  - **Depuración de Parámetros de Pantalla:** Se purga `vga=normal` y se fija `nomodeset inst.text console=tty0 console=ttyS0,115200n8`, estabilizando el conversor VGA a HDMI de la GPU Matrox MGA G200e.
+  - **Alineación de Kickstart:** `selinux --permissive` y sincronización con `chronyd` para desacoplar el arranque del desfase temporal de la pila de litio agotada.

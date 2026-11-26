@@ -92,3 +92,27 @@ Para diagnosticar sin depender de la salida de vídeo, se establecen cuatro moni
 | `sniff-dhcp-traffic.py` | Escucha pasiva de tramas DHCP DISCOVER/REQUEST en puerto 67 UDP. | Identifica si el servidor está en fase de arranque PXE ROM o de cliente OS. |
 | `scan-active-ssh.py` | Barrido asíncrono con timeout corto (0.3 s) sobre subred `192.168.137.0/24`. | Detecta la apertura inmediata del puerto 22 SSH al terminar el boot. |
 | `recover-vga-hdmi.bat` | Reseteo por software de alimentación de concentradores USB vinculados al conversor. | Fuerza el reenganche de fase analógica en pantallas externas. |
+
+---
+
+## 6. Firma de Eventos de Carga Masiva y Mitigación Vía B
+
+Durante las pruebas de despliegue en vivo se identificó el patrón de telemetría característico de un desbordamiento de ramdisk en BIOS Legacy:
+
+```text
+[T+00s] Enlace Ethernet pasa a Up a 1 Gbps (Tarjeta Broadcom activa en PXE)
+[T+05s] DHCP DISCOVER (BIOS PXE ROM) -> DHCPOFFER -> TFTP undionly.kpxe (80 KB)
+[T+08s] iPXE Client solicita boot.ipxe por HTTP (200 OK)
+[T+10s] Descarga masiva HTTP: vmlinuz (15 MB) e initrd.img (228 MB) a ~50 MB/s
+[T+15s] Fin de transferencia de 243 MB (LED de red parpadea intensamente)
+[T+45s] Silencio de red -> DHCP DISCOVER (BIOS PXE ROM) cíclico
+```
+
+### Diagnóstico Forense:
+* La BIOS AMI de 2011 no logra mapear contiguamente un ramdisk de 228 MB al descomprimirse en memoria real (alcanza 700+ MB), colisionando con el área EBDA o buffers de la Smart Array P410 y disparando una excepción de CPU (*Triple Fault*).
+* El parámetro deprecado `vga=normal` en kernels modernos de RHEL 9 (5.14+) acelera el pánico de kernel al intentar ejecutar llamadas de selector de vídeo de 16 bits inexistentes.
+
+### Solución Vía B (Oficial AlmaLinux 9):
+1. **Separación de Etapas:** Incorporación de `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os` en los parámetros de kernel en `boot.ipxe`, permitiendo a Dracut cargar el entorno de Anaconda bajo demanda por HTTP.
+2. **Purga de Parámetros de Vídeo de 16 bits:** Eliminación estricta de `vga=normal` y fijación de `nomodeset inst.text console=tty0 console=ttyS0,115200n8`.
+3. **Kickstart Permisivo:** Inclusión de `selinux --permissive` y sincronización con `chronyd` para desacoplar el arranque de la fecha de 2011 de la batería CMOS agotada.
