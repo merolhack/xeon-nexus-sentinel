@@ -59,3 +59,4 @@ Bienvenido a la memoria central de **Xeon-Nexus-Sentinel**. Este índice es la r
 * [AGENTS.md](file:///AGENTS.md) — Directivas y reglas estrictas para agentes de IA.
 * [SPEC.md](file:///SPEC.md) — Esquema OKF v0.2 de la memoria de conocimiento.
 * [log.md](file:///log.md) — Bitácora de cambios y decisiones técnicas.
+- [Guía de Expansión de Hardware, Despliegue de LLMs SSE4.2 y Orquestación Cripto](wiki/concepts/hardware-upgrades-and-crypto-orchestration.md)
