@@ -151,3 +151,9 @@ Durante las sesiones de laboratorio y pruebas en vivo con el HP ProLiant ML150 G
   - **Parámetro Obligatorio `inst.stage2`:** Se sustituye `inst.repo` por `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os`, permitiendo a Dracut montar dinámicamente el entorno de Anaconda por streaming HTTP sin saturar la memoria baja.
   - **Depuración de Parámetros de Pantalla:** Se purga `vga=normal` y se fija `nomodeset inst.text console=tty0 console=ttyS0,115200n8`, estabilizando el conversor VGA a HDMI de la GPU Matrox MGA G200e.
   - **Alineación de Kickstart:** `selinux --permissive` y sincronización con `chronyd` para desacoplar el arranque del desfase temporal de la pila de litio agotada.
+## 6. Culminación Exitosa del Ciclo de Despliegue y Arranque SAS
+
+La arquitectura en dos fases (Vía B con `inst.stage2` oficial) resolvió de forma definitiva el límite de ramdisk de 228 MB en Legacy BIOS:
+1. **Fase de Instalación:** Anaconda completó el particionado de discos SAS de 15,000 RPM, descargó 1.4 GB de paquetes RPM base por Gigabit y configuró OpenSSH y NTP antes del reinicio.
+2. **Fase de Producción:** Con la opción predeterminada `local_sas` (`sanboot --no-describe --drive 0x80`) en `boot.ipxe`, el servidor arranca de forma autónoma desde el almacenamiento SAS local.
+3. **Acceso Operativo:** Puerto SSH 22 disponible en `192.168.137.50` con credencial `root` / `nexusadmin2026!`.

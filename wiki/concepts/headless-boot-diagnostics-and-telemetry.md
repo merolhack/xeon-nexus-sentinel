@@ -116,3 +116,22 @@ Durante las pruebas de despliegue en vivo se identificó el patrón de telemetr�
 1. **Separación de Etapas:** Incorporación de `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os` en los parámetros de kernel en `boot.ipxe`, permitiendo a Dracut cargar el entorno de Anaconda bajo demanda por HTTP.
 2. **Purga de Parámetros de Vídeo de 16 bits:** Eliminación estricta de `vga=normal` y fijación de `nomodeset inst.text console=tty0 console=ttyS0,115200n8`.
 3. **Kickstart Permisivo:** Inclusión de `selinux --permissive` y sincronización con `chronyd` para desacoplar el arranque de la fecha de 2011 de la batería CMOS agotada.
+## 5. Diagnóstico de la Secuencia de Pantalla AMI BIOS O21 y USB Mass Storage
+
+Durante el ciclo de arranque del HP ProLiant ML150 G6 con firmware AMI BIOS O21 (18/01/2011), la última pantalla observable en modo texto muestra:
+```text
+BMC Fan Curve updating...Done
+Auto-Detecting Third Master....ATAPI CDROM
+Third Master : hp DVDROM DH40N IS01
+               Ultra DMA Mode-5
+Auto-detecting USB Mass Storage Devices ..
+00 USB mass storage devices found and configured.
+```
+
+### Interpretación Forense del Hito:
+1. **No es un cuelgue del sistema:** Este mensaje no indica un error ni bloqueo de memoria; es la culminación de la fase de sondeo de periféricos de almacenamiento USB en la BIOS.
+2. **Transferencia de Control a Option ROM:** Inmediatamente después de este mensaje, la BIOS concluye el POST primario y cede el control a las Option ROMs secundarias:
+   - ROM de la controladora HP Smart Array P410 (para arranque SAS).
+   - ROM de red Broadcom MBA (para arranque PXE).
+3. **Causa del Síntoma Sin Señal:** Durante el handoff entre la BIOS (modo texto VGA 720x400) y la inicialización de la controladora RAID / GRUB / Kernel (`nomodeset`), el chip gráfico Matrox G200 suspende brevemente el refresco horizontal y vertical. Convertidores activos VGA a HDMI de bajo costo pierden la sincronización HDMI, proyectando "Sin señal" en pantallas modernas aunque el servidor continúa arrancando de forma transparente.
+4. **Verificación Definitiva:** El cambio del enlace físico de 100 Mbps a 1 Gbps y la respuesta del puerto SSH 22 confirman que el sistema operativo toma el control y se ejecuta en background sin depender del monitor.

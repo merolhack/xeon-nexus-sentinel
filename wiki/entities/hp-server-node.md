@@ -68,3 +68,22 @@ updated: 2026-11-23
   * Parámetros de pantalla optimizados: `nomodeset inst.text console=tty0 console=ttyS0,115200n8`, erradicando el parámetro obsoleto `vga=normal` que provocaba excepciones de CPU.
   * Se transfirieron más de 1.4 GB de paquetes RPM base a velocidades de entre 23 y 31 MB/s a través del enlace Gigabit de la laptop (`192.168.137.1`).
   * Anaconda completó el particionado de los discos SAS 15K RPM (`/dev/sda`), instaló el cargador GRUB en el MBR, ejecutó la configuración `%post` de SSH y sincronizador `chronyd`, y ejecutó el reinicio autónomo hacia el disco SAS local.
+## 5. Telemetría y Estado Operativo en Vivo de AlmaLinux 9 (Noviembre 2026)
+
+Tras el reinicio del servidor y la cesión de control al almacenamiento SAS local, la conexión SSH administrativa (`ssh root@192.168.137.50`) quedó plenamente operativa. La telemetría en vivo auditada por el agente reporta:
+
+* **Sistema Operativo y Kernel:** `AlmaLinux release 9.9 (Chartreuse Bobcat)` con kernel Linux `5.14.0-741.27.1.el9_9.x86_64`.
+* **Procesador Físico:** Intel Xeon E5504 @ 2.00 GHz, 4 núcleos físicos (0-3), 1 zócalo poblado, SSE4.2, 4 MB L3 caché, nodo NUMA 0.
+* **Memoria RAM Real:** 7.5 GiB utilizables en DDR3 Registered ECC Micron (`PC3-10600R`). Consumo base en reposo de solo 509 MiB (7.0 GiB libres para inferencia y cómputo) y Swap de 7.9 GiB.
+* **Almacenamiento SAS Real (`lsblk` / `df -h`):**
+  * `/dev/sda1` (1.0 GB XFS): Montado en `/boot`.
+  * `/dev/sda2` (7.9 GB SWAP): Partición de intercambio activa.
+  * `/dev/sda3` (70.0 GB XFS): Partición raíz `/` (2.1 GB usados, 68 GB disponibles).
+  * `/dev/sda5` (340.3 GB XFS): Partición `/home` para datasets y binarios.
+* **Red Gigabit e Internet:**
+  * Interfaz del SO: `enp4s0` con dirección IPv4 estática `192.168.137.50/24`.
+  * Conectividad WAN: Confirmada mediante resolución HTTP/2 hacia `repo.almalinux.org` vía nodo CDN en Querétaro.
+* **Sincronización Horaria (NTP):**
+  * Servicio `chronyd` activo y sincronizado.
+  * Zona horaria: `America/Mexico_City (CST, -0600)`.
+  * La hora del RTC y del reloj del sistema ha quedado corregida automáticamente, neutralizando el desfase de fábrica de 2011.

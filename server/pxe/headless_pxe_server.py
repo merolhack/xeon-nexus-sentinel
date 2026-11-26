@@ -326,13 +326,13 @@ class DHCPServer:
                 pass
             print(f"[DHCP-4011] Enviado DHCPOFFER -> {addr[0]}:{addr[1]} (Bootfile: {boot_file.decode('ascii')})")
         else:
-            # Enviar por subnet broadcast de Ethernet Y broadcast universal
-            for broadcast_ip in ["192.168.137.255", "255.255.255.255"]:
+            # Enviar por unicast a la IP ofrecida, subnet broadcast y broadcast universal
+            for dest_ip in [self.assigned_ip, "192.168.137.255", "255.255.255.255"]:
                 try:
-                    sock.sendto(pkt, (broadcast_ip, 68))
+                    sock.sendto(pkt, (dest_ip, 68))
                 except Exception:
                     pass
-            print(f"[DHCP-67] Enviado DHCPOFFER -> 192.168.137.255:68 / 255.255.255.255:68 (Bootfile: {boot_file.decode('ascii')})")
+            print(f"[DHCP-67] Enviado DHCPOFFER -> {self.assigned_ip}:68 / 192.168.137.255:68 (Bootfile: {boot_file.decode('ascii')})")
 
     def send_ack(self, xid, chaddr, boot_file, addr, is_ipxe, sock):
         yiaddr = ip_to_bytes(self.assigned_ip)
@@ -376,12 +376,12 @@ class DHCPServer:
                 pass
             print(f"[DHCP-4011] Enviado DHCPACK -> {addr[0]}:{addr[1]} (Bootfile: {boot_file.decode('ascii')})")
         else:
-            for broadcast_ip in ["192.168.137.255", "255.255.255.255"]:
+            for dest_ip in [self.assigned_ip, "192.168.137.255", "255.255.255.255"]:
                 try:
-                    sock.sendto(pkt, (broadcast_ip, 68))
+                    sock.sendto(pkt, (dest_ip, 68))
                 except Exception:
                     pass
-            print(f"[DHCP-67] Enviado DHCPACK -> 192.168.137.255:68 / 255.255.255.255:68 (Bootfile: {boot_file.decode('ascii')})")
+            print(f"[DHCP-67] Enviado DHCPACK -> {self.assigned_ip}:68 / 192.168.137.255:68 (Bootfile: {boot_file.decode('ascii')})")
 
 
 # =====================================================================
