@@ -91,15 +91,33 @@ Durante las sesiones de laboratorio y pruebas en vivo con el HP ProLiant ML150 G
 - **Herramienta:** Creación de `scripts/burn-iso.ps1`, automatizando `C:\Windows\System32\isoburn.exe /Q E: C:\Users\lenin\pxeboot\ipxe.iso` sobre la unidad óptica externa PHILIPS CDRW/DVD SCB5265 (Unidad E:).
 - **Resultado:** Grabación de pistas finalizada exitosamente con código de salida 0, lista para ser leída por la lectora frontal del servidor y conectar por Gigabit al servidor PXE de la laptop.
 
-### 5.5 Diagnóstico de Beeps del BIOS, Arreglo SAS y Estrategia Cero-Teclado
+### 5.5 Diagnóstico de Beeps del BIOS, Arreglo SAS y Validación de Hardware
 - **Comportamiento con Discos Extraídos (2 Beeps Cortos):**
   - Al extraer las dos charolas de discos SAS frontales hacia afuera para evitar el inicio de Windows Server, la controladora Smart Array P410 emitió 2 beeps cortos y pausó el POST en la advertencia `1785-Slot X Drive Array - Drive(s) Not Detected (Press F1 to continue)`.
-  - Sin teclado físico conectado, el servidor se mantuvo esperando confirmación, manteniendo los ventiladores y LEDs de estado en verde.
+  - Sin confirmación, el servidor se mantuvo esperando en pausa preventiva.
 - **Comportamiento con Discos Reinsertados (1 Beep Corto):**
   - Al reinsertar y bloquear las dos charolas de discos SAS (450 GB 15K RPM HP Spare 517352-001) y reiniciar, el servidor emitió un único beep corto (POST exitoso y saludable).
-  - El BIOS dio paso al cargador de arranque en disco, mostrando la pantalla de recuperación "Iniciar Windows normalmente" y continuando hacia "Aplicando la configuración del equipo".
-  - Durante esta fase se confirmó el enlace físico Gigabit activo en la laptop (`Ethernet` Realtek GbE) con incremento de bytes recibidos (+31 KB).
-- **Estrategia Headless sin Teclado (Ratón USB + Accesibilidad + Diskpart Clean):**
-  - El servidor opera bajo la restricción estricta de **cero teclado físico**.
-  - Se cuenta con un ratón USB conectado a los puertos frontales. A través del menú de Accesibilidad en la pantalla de bienvenida de Windows Server, se activa el Teclado en Pantalla (`osk.exe`) para enviar `Ctrl+Alt+Supr`.
-  - En la siguiente sesión, desde Windows o la consola de recuperación WinRE, se ejecutará `diskpart -> select disk 0 -> clean` para borrar la tabla MBR de Windows Server. Al quedar el disco sin cargador pero físicamente presente y saludable, la Smart Array no dará error y el BIOS caerá automáticamente hacia el CD-R de iPXE o PXE Netboot para la instalación desatendida de AlmaLinux 9.
+  - El BIOS reconoció 8192 MB (8 GB) limpios en las ranuras primarias blancas `DIMM2A` y `DIMM4B` con módulos Micron/IBM DDR3 ECC Registered.
+
+### 5.6 Configuración del BIOS Setup y Bloqueo Definitivo de Windows
+- **Acceso a Setup de Firmware:** Entrada interactiva confirmada con tecla **`F10`** (o `Supr` / Delete).
+- **Parámetros Validados:**
+  - Placa Base: HP ProLiant ML150 G6, ROMID 021, ROM Revision 01/18/2011.
+  - Procesador: Intel Xeon E5504 @ 2.00GHz (1 procesador físico, 4 cores).
+  - Red Onboard: MAC `44:1E:A1:6E:D2:E4` (HP NC107i / Broadcom MBA v11.0.8).
+  - Prioridad de Arranque USB: `USB Device Boot Priority: [High]`.
+- **Orden de Arranque Establecido (Pestaña Boot):**
+  - `1st Boot Device:` **`[CD/DVD]`**
+  - `2nd Boot Device:` **`[Network:MBA v11.0.]`**
+  - `3rd Boot Device:` **`[Disabled]`** (📌 Deshabilitación total de `[Hard Drive]`).
+- **Efecto de Bloqueo:** El sistema preexistente Windows Server 2008 R2 Enterprise (dominio gubernamental `gppan.senado.gob.mx\administrador`) queda 100% inhabilitado para arrancar.
+- **Estado de Halt y Señal de Vídeo:** Al fallar la lectura del CD y agotarse los intentos de PXE, el BIOS ejecuta un ciclo de Halt / Boot Failure. La controladora gráfica Matrox G200e desconecta la sincronización VGA analógica, provocando que el conversor activo muestre en la TV LG el mensaje de **"Sin señal"**.
+
+### 5.7 Refactorización del Servidor PXE Autónomo (Subnet Directed Broadcast)
+- **Diagnóstico del Fallo de Negociación DHCP:**
+  - En Windows 11 con múltiples interfaces activas (Wi-Fi + Ethernet Realtek + adaptadores virtuales VMware/WSL), los paquetes dirigidos a la dirección de difusión universal `255.255.255.255:68` son enrutados por el kernel hacia la interfaz con la ruta predeterminada (Wi-Fi), impidiendo que el cliente en el enlace directo Ethernet reciba el `DHCPOFFER`.
+  - La inclusión de la Opción DHCP 60 (`PXEClient`) en el puerto 67 instruye al cliente PXE a ignorar el `bootfile` y buscar un ProxyDHCP externo en el puerto 4011.
+- **Correcciones Implementadas en `headless_pxe_server.py`:**
+  1. **Subnet Directed Broadcast:** Se transmite tanto a `192.168.137.255:68` como a `255.255.255.255:68`, garantizando la salida física del paquete por la NIC Ethernet local.
+  2. **Depuración de Opción 60:** Eliminación de la Opción 60 en las respuestas del puerto 67, permitiendo que la ROM Broadcom MBA v11.0 tome el `bootfile` (`undionly.kpxe`) y la IP TFTP (`192.168.137.1`) de forma directa y unificada.
+  3. **Multi-Socket Binding:** Enlace concurrente en `192.168.137.1:67/4011/69` y `0.0.0.0:67/4011/69` con hilos dedicados para TFTP y HTTP.

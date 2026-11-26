@@ -56,13 +56,20 @@ updated: 2026-11-23
   * La pantalla de recuperación de Windows apareció tras el apagado previo ("Iniciar Windows normalmente") y continuó automáticamente hacia *"Aplicando la configuración del equipo"*.
   * Esto confirmó la total integridad del hardware: placa base, CPUs Xeon, módulos de memoria ECC y controladora Smart Array P410 están al 100% operativos.
   * Durante el arranque de Windows, la interfaz física `Ethernet` en la laptop registró actividad de recepción de red (+31 KB).
-* **Estrategia Operativa Headless sin Teclado Físico (Cero-Keyboard):**
-  * Se estableció como premisa definitiva que el servidor **no cuenta ni contará con teclado USB físico**.
-  * Se cuenta con un **ratón/mouse USB** conectado a los puertos frontales del servidor.
-  * Mediante el icono de **Facilidad de acceso (Accesibilidad)** en la esquina inferior izquierda de la pantalla de bienvenida de Windows, se activa el **Teclado en Pantalla** (`osk.exe`) para enviar `Ctrl+Alt+Supr` y comandos administrativos con el ratón.
-* **Estrategia para Forzar el Arranque Desatendido de AlmaLinux 9:**
-  * Dado que el BIOS prioriza el disco duro local sobre el CD-ROM/PXE mientras exista un cargador de arranque en el MBR, la estrategia técnica consiste en:
-    1. Acceder a Windows o al entorno de recuperación WinRE con el ratón y teclado en pantalla.
-    2. Ejecutar `diskpart -> select disk 0 -> clean` para borrar la tabla de particiones y MBR de Windows Server.
-    3. Al reiniciar, la Smart Array P410 detectará los discos sanos (sin 2 beeps de error), pero al no encontrar sistema operativo en disco, el BIOS caerá automáticamente al siguiente dispositivo: el **CD-R con iPXE** o **PXE Netboot**.
-    4. El instalador Anaconda Kickstart (`ks.cfg`) particionará e instalará AlmaLinux 9 de forma 100% desatendida.
+* **Intervención y Validación de Teclado y Setup de BIOS:**
+  * Se confirmó la disponibilidad de teclado USB para la interacción directa con el firmware.
+  * Tecla de acceso confirmada al BIOS Setup: **`F10`** (o `Supr` / Delete).
+  * Firmware detectado: **AMI BIOS v02.61, ROMID 021, Fecha de Revisión 01/18/2011**.
+  * Detección de Procesador: Intel(R) Xeon(R) CPU E5504 @ 2.00GHz (1 CPU físico, 4 de 4 cores lógicos habilitados).
+  * Detección de Memoria: **`System Memory Size: 8192MB` (8 GB)** limpios y estables tras aislar los dos módulos nuevos VLP Micron/IBM 4 GB DDR3 ECC Registered en las ranuras primarias blancas `DIMM2A` y `DIMM4B`.
+  * Dirección MAC integrada: **`44-1E-A1-6E-D2-E4`** (HP NC107i Gigabit / Broadcom MBA v11.0.8).
+* **Bloqueo Definitivo de Windows y Configuración de Arranque:**
+  * El sistema preexistente en los discos SAS de 450 GB es **Windows Server 2008 R2 Enterprise** bajo el dominio gubernamental `gppan.senado.gob.mx\administrador` (bloqueado sin credenciales locales).
+  * Para erradicar el secuestro del ciclo de arranque por parte de Windows sin necesidad de formateo previo:
+    1. En la pestaña `Boot` del BIOS Setup se configuró:
+       - `1st Boot Device:` **`[CD/DVD]`**
+       - `2nd Boot Device:` **`[Network:MBA v11.0.]`**
+       - `3rd Boot Device:` **`[Disabled]`** ➔ Bloqueo definitivo del disco duro SAS (`Hard Drive`).
+    2. Comportamiento resultante: El servidor ya no puede cargar Windows Server. Tras agotar los intentos de lectura de CD y de negociación PXE, el BIOS entra en estado `Halt / Boot Failure`.
+    3. Comportamiento de vídeo Matrox G200e con conversor activo VGA a HDMI: Al cesar la actividad de arranque y entrar en reposo la CPU, la controladora gráfica apaga la sincronización de vídeo VGA, mostrando la TV LG el mensaje de **"Sin señal"**.
+    4. Tráfico PXE en tiempo real: Se verificó que la ROM Broadcom MBA v11.0 genera solicitudes `DHCP DISCOVER` repetitivas en el puerto 67 UDP hacia la laptop (`192.168.137.1`), lista para recibir paquetes de arranque de red.

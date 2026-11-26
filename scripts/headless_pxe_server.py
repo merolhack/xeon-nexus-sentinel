@@ -36,28 +36,43 @@ def ip_to_bytes(ip_str):
 # 1. TFTP SERVER (RFC 1350 + RFC 2348 blksize support)
 # =====================================================================
 class TFTPServer:
-    def __init__(self, host="0.0.0.0", port=69, root_dir=TFTP_DIR):
-        self.host = host
+    def __init__(self, server_ip=SERVER_IP, port=69, root_dir=TFTP_DIR):
+        self.server_ip = server_ip
         self.port = port
         self.root_dir = root_dir
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sockets = []
+        for host in [server_ip, "0.0.0.0"]:
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind((host, port))
+                self.sockets.append((s, host))
+            except Exception:
+                pass
         self.running = False
 
     def start(self):
-        self.sock.bind((self.host, self.port))
         self.running = True
-        print(f"[TFTP] Servidor escuchando en {self.host}:{self.port} (Directorio: {self.root_dir})")
+        print(f"[TFTP] Servidor escuchando en {len(self.sockets)} endpoints (puerto {self.port}) (Directorio: {self.root_dir})")
+        threads = []
+        for s, host in self.sockets:
+            t = threading.Thread(target=self.listen_socket, args=(s, host), daemon=True)
+            t.start()
+            threads.append(t)
+        for t in threads:
+            t.join()
+
+    def listen_socket(self, s, host):
         while self.running:
             try:
-                data, addr = self.sock.recvfrom(2048)
-                threading.Thread(target=self.handle_client, args=(data, addr), daemon=True).start()
+                data, addr = s.recvfrom(2048)
+                threading.Thread(target=self.handle_client, args=(data, addr, s), daemon=True).start()
             except Exception as e:
                 if self.running:
-                    print(f"[TFTP] Error en socket: {e}")
+                    print(f"[TFTP] Error en socket {host}: {e}")
                 break
 
-    def handle_client(self, data, addr):
+    def handle_client(self, data, addr, in_sock=None):
         if len(data) < 4:
             return
         opcode = struct.unpack("!H", data[:2])[0]
@@ -90,7 +105,8 @@ class TFTPServer:
         if not os.path.exists(filepath):
             # Error response: File not found (error code 1)
             err_msg = b"\x00\x05\x00\x01File not found\x00"
-            self.sock.sendto(err_msg, addr)
+            if in_sock:
+                in_sock.sendto(err_msg, addr)
             print(f"[TFTP] Solicitud de {addr[0]}: archivo no encontrado '{filename}'")
             return
 
@@ -99,6 +115,10 @@ class TFTPServer:
             file_data = f.read()
 
         client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            client_sock.bind((self.server_ip, 0))
+        except Exception:
+            pass
         client_sock.settimeout(5.0)
 
         block_num = 1
@@ -296,9 +316,9 @@ class DHCPServer:
         opts += b"\xff"  # End
 
         pkt = hdr + cookie + bytes(opts)
-        dest = ("255.255.255.255", 68)
+        dest = (addr[0], addr[1]) if sock.getsockname()[1] == 4011 else ("255.255.255.255", 68)
         sock.sendto(pkt, dest)
-        print(f"[DHCP] Enviado DHCPOFFER -> {self.assigned_ip} (Bootfile: {boot_file.decode('ascii')})")
+        print(f"[DHCP] Enviado DHCPOFFER -> {dest} (Bootfile: {boot_file.decode('ascii')})")
 
     def send_ack(self, xid, chaddr, boot_file, addr, is_ipxe, sock):
         yiaddr = ip_to_bytes(self.assigned_ip)
@@ -334,9 +354,9 @@ class DHCPServer:
         opts += b"\xff"
 
         pkt = hdr + cookie + bytes(opts)
-        dest = ("255.255.255.255", 68)
+        dest = (addr[0], addr[1]) if sock.getsockname()[1] == 4011 else ("255.255.255.255", 68)
         sock.sendto(pkt, dest)
-        print(f"[DHCP] Enviado DHCPACK -> {self.assigned_ip} (Bootfile: {boot_file.decode('ascii')})")
+        print(f"[DHCP] Enviado DHCPACK -> {dest} (Bootfile: {boot_file.decode('ascii')})")
 
 
 # =====================================================================
