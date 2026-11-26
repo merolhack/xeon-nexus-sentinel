@@ -40,6 +40,7 @@ Bienvenido a la memoria central de **Xeon-Nexus-Sentinel**. Este índice es la r
 * [secrets-management-and-gitguardian.md](file:///wiki/concepts/secrets-management-and-gitguardian.md) — Gestión segura de credenciales, política de cero secretos y validación con GitGuardian y pre-commit hooks.
 * [storage-optimization-and-gdrive-backup.md](file:///wiki/concepts/storage-optimization-and-gdrive-backup.md) — Optimización de disco local (Windows 11 / WSL2) y respaldos seguros en Google Drive con rclone (5 TiB).
 * [execution-timeouts-and-anti-hang-patterns.md](file:///wiki/concepts/execution-timeouts-and-anti-hang-patterns.md) — Políticas estrictas de timeout y patrones anti-bloqueo en comandos de red y diagnóstico del agente.
+* [strata-vs-ollama-inference.md](file:///wiki/concepts/strata-vs-ollama-inference.md) — Análisis arquitectónico de Strata Frameworks (MoE Qwen3.8/GLM), jerarquía de memoria y viabilidad frente a Ollama en CPU Xeon Nehalem.
 
 ### 3. Entidades de Hardware e Infraestructura (`wiki/entities/`)
 * [hp-server-node.md](file:///wiki/entities/hp-server-node.md) — Servidor empresarial HP ProLiant ML150 G6 en modo headless con AlmaLinux 9 Minimal.
