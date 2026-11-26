@@ -55,3 +55,17 @@ Registro cronológico acumulativo (append-only) de decisiones de diseño, tareas
    - **Despliegue de LLMs en CPU SSE4.2:** Determinación de que la CPU carece de AVX/AVX2, requiriendo compilación de `llama.cpp` con `-DLLAMA_AVX=OFF -DLLAMA_AVX2=OFF -DLLAMA_FMA=OFF -DLLAMA_F16C=OFF`. Identificación de modelos óptimos en GGUF Q4_K_M para los 7.0 GiB libres en RAM (Llama-3.2-1B/3B, Qwen2.5-1.5B/3B con `--mlock`).
    - **DeNet Storage y Orquestación Cripto:** Asignación de 150–250 GB en `/home` (XFS sobre arreglo SAS RAID) para nodo Datakeeper de DeNet Storage. Rol del servidor como orquestador 24/7 sin minería de CPU (Grass Network, proxy/caché RPC blockchain, bots de trading/arbitraje y central de métricas Prometheus/Grafana).
    - **Documentación:** Creación de `wiki/concepts/hardware-upgrades-and-crypto-orchestration.md` y actualización de `wiki/entities/hp-server-node.md` e `index.md`.
+
+31. **Auditoría de Laptop Windows 11 (i9-13900HX, RTX 4060, 32GB DDR5) y Arquitectura Híbrida con Servidor HP:**
+   - **Auditoría de Hardware de Estación Local:** Análisis profundo del nodo de trabajo `laptop-node` (THUNDEROBOT ZERO) bajo Windows 11 Pro:
+     * CPU: 13th Gen Intel Core i9-13900HX (24 núcleos / 32 hilos, 36 MB L3 cache, AVX2, VNNI).
+     * RAM: 32 GB DDR5-5600 MT/s en Dual-Channel (2x 16 GB Samsung `M425R2GA3BB0-CWMOD`).
+     * GPU Dedicada: NVIDIA GeForce RTX 4060 Laptop GPU (8 GB GDDR6 Ada Lovelace, Compute Capability 8.9, Tensor Cores 4ª Gen, ~7.95 GB VRAM libres).
+     * GPU Integrada: Intel UHD Graphics Raptor Lake (1 GB).
+     * Almacenamiento: SSD NVMe M.2 de 1 TB (23.2 GB libres en C:).
+     * Red: Realtek Gigabit Ethernet a 1 Gbps directo hacia el servidor HP (`192.168.137.1` <-> `192.168.137.50`) y Wi-Fi 6 AX201.
+   - **Formulación de Arquitectura Híbrida IA:** División de responsabilidades computacionales aprovechando el enlace de 1 Gbps (<0.3 ms de latencia):
+     * Laptop (RTX 4060): Inferencia interactiva de alta velocidad (50–90 tok/s en modelos 7B/8B como Llama-3.1 y Qwen2.5) y generación de embeddings vectoriales.
+     * Servidor HP (Xeon E5504 + 8GB ECC + SAS RAID): Hospedaje 24/7 de bases de datos vectoriales (RAG persistente), agentes en segundo plano y descarga de capas mediante `llama.cpp` RPC Server (`--rpc 192.168.137.50:50052`) para modelos que superen los 8 GB de la GPU.
+   - **Sinergia Cripto y DePIN:** El servidor asume el rol de worker 24/7 asignando 200–250 GB de su arreglo SAS para DeNet Storage (protegiendo el NVMe de la laptop de 23 GB libres), colocalizando nodos DePIN (Grass) y bots de trading desatendidos, mientras la laptop actúa como centro de control seguro e interfaz de billeteras.
+   - **Documentación:** Creación de `wiki/entities/thunderobot-laptop-node.md`, `wiki/concepts/hybrid-ai-and-crypto-synergy.md` y actualización de `index.md`.

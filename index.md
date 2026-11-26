@@ -60,3 +60,5 @@ Bienvenido a la memoria central de **Xeon-Nexus-Sentinel**. Este índice es la r
 * [SPEC.md](file:///SPEC.md) — Esquema OKF v0.2 de la memoria de conocimiento.
 * [log.md](file:///log.md) — Bitácora de cambios y decisiones técnicas.
 - [Guía de Expansión de Hardware, Despliegue de LLMs SSE4.2 y Orquestación Cripto](wiki/concepts/hardware-upgrades-and-crypto-orchestration.md)
+- [Nodo de Trabajo: Laptop THUNDEROBOT ZERO](wiki/entities/thunderobot-laptop-node.md)
+- [Arquitectura Híbrida: Laptop RTX 4060 + Servidor HP 24/7](wiki/concepts/hybrid-ai-and-crypto-synergy.md)
