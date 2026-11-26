@@ -1,9 +1,8 @@
 # XEON-NEXUS-SENTINEL-LLM-WIKI-MASTER.md — Compendio Maestro de Conocimiento Xeon-Nexus-Sentinel
 - **Notebook URL:** https://notebook.google.com/notebook/1bd607be-628c-4228-a1f5-5b4f5dd59093
-- **Arquitectura:** Google OKF v0.2 + Karpathy 3-Layer LLM Wiki (`raw/`, `wiki/`, `SPEC.md`)
 - **Archivos Compilados:** 23
-- **SHA-256:** `a17681bb4201a671914e1f210b29af6f8ee6d1351e3d627d89679512987be9ca`
-- **Fecha de Compilación:** 2026-11-26T18:47:54.241Z
+- **SHA-256:** `84aa9a87fffecb7f51dd6b8fbd3d3947b46f3331b946496586bb86d3ba5d84da`
+- **Fecha:** 2026-11-26T20:04:10.661Z
 
 
 ================================================================================
@@ -229,373 +228,36 @@ Bienvenido a la memoria central de **Xeon-Nexus-Sentinel**. Este índice es la r
 
 
 ================================================================================
-# FILE: wiki/entities/hp-server-node.md
+# FILE: wiki/concepts/cpu-inference-tuning.md
 ================================================================================
 
 ---
-type: entity
-title: "Nodo Físico: Servidor HP ProLiant ML150 G6"
-description: "Servidor empresarial torre de doble zócalo Xeon operando en modo headless con AlmaLinux 9 Minimal"
-tags: [servidor, hp-proliant, almalinux, headless, ilo, xeon, smart-array, ipxe]
-created: 2026-11-22
-updated: 2026-11-23
----
-
-# Nodo Físico: Servidor HP ProLiant ML150 G6 (`hp-server-node`)
-
-## 1. Identificación y Rol
-
-* **Hostname Local:** `xeon-sentinel.local` o IP estática en red interna.
-* **Sistema Operativo Destino:** AlmaLinux 9.x Minimal (x86_64, sin interfaz gráfica).
-* **Sistema Operativo Preexistente (Detectado):** Windows Server 2008 R2 Enterprise (instalado en disco).
-* **Modo Operativo:** Headless continuo (sin teclado ni monitor conectados en producción).
-* **Propósito:** Nodo de cómputo en segundo plano para minería RandomX de baja prioridad, ejecución cuantizada de modelos ligeros con `llama.cpp` y recolección de métricas.
-
-## 2. Puntos de Entrada y Control
-
-* **HP iLO 100i (BMC):** Puerto Ethernet dedicado o compartido. Permite control de energía (power-on/reboot forzado) e inspección de salud térmica.
-* **OpenSSH (Puerto 22):** Acceso administrativo seguro mediante llave criptográfica `ed25519` y autenticación de root preconfigurada en Kickstart.
-* **Cockpit (Puerto 9090):** Panel web nativo para gestión de discos, red, paquetes y terminal web directa.
-* **Daemon Local (xeon-sentinel):** Servicio systemd que recopila telemetría y controla el gobernador de alternancia.
-
-## 3. Especificaciones de Hardware Verificadas en Laboratorio
-
-* **Procesadores:** Dual Intel Xeon LGA1366 (Nehalem, 4 núcleos por zócalo, SSE4.2, triple canal de memoria DDR3 ECC).
-* **Memoria RAM Verificada y Población de Slots:**
-  * **Configuración Actual Operativa:** 8192 MB (8 GB) limpios en DDR3-1333 Registered ECC.
-  * **Módulos Instalados:** 2 × Micron 4 GB `PC3-10600R` (`MT36JBZS51272PY-1G4D1`) en zócalos primarios blancos `DIMM 2A` y `DIMM 4B` de CPU1.
-  * **Gobernanza de Memoria y Coexistencia:** Prohibición absoluta de mezcla entre módulos RDIMM y UDIMM (`PC3-10600E`). Los módulos preexistentes heredados (2x Nanya 4GB + 1x Samsung 2GB UDIMM) fueron desacoplados para garantizar la estabilidad eléctrica. (Véase detalle en [server-memory-and-bios-governance.md](../concepts/server-memory-and-bios-governance.md)).
-* **Controlador de Almacenamiento:** HP Smart Array P410 con caché SAS/SATA y arreglo RAID activo.
-* **Unidades de Disco Físicas (Identificadas en Bahías Hot-Plug):**
-  * **Bahía 1:** 450 GB SAS 6G Dual-Port 15,000 RPM (HP Spare: `517352-001`).
-  * **Bahía 2:** 450 GB SAS 6G Dual-Port 15,000 RPM (HP Spare: `517352-001`).
-  * **Bahía 3:** Vacía.
-  * **Bahía 4:** Bandeja ciega de relleno (Drive Blank Filler).
-* **Puertos y Panel Frontal:**
-  * 2 puertos frontales USB 2.0 (compatibles con ratón/mouse USB y almacenamiento).
-  * LEDs de estado: LED de encendido (Verde continuo), LED de salud del chasis (Verde continuo, confirmando salud operativa 100%), LED de actividad de red.
-  * Botón de encendido frontal (Power/Standby con apagado forzado de 5 segundos).
-* **Puertos de Red (NIC):** Dos puertos Gigabit integrados HP NC107i (Broadcom BCM5723):
-  * **Puerto 1 / Mgmt (inferior):** Puerto Ethernet primario para PXE Netboot, enlace Gigabit con la laptop (192.168.137.1) y gestión.
-  * **Puerto 2 (superior):** Puerto Ethernet secundario.
-* **Video y Pantalla:** Chip gráfico Matrox G200 integrado con salida VGA trasera estándar.
-* **Unidad Óptica:** Lector interno frontal DVD/CD SATA/IDE con bandeja motorizada.
-
-## 4. Hallazgos y Resultados de las Pruebas Físicas (Noviembre 2026)
-
-* **Diagnóstico de Video VGA a HDMI y Pérdida de Sincronismo:**
-  * Se conectó un adaptador activo VGA a HDMI hacia una pantalla/TV HDMI LG.
-  * El conversor activo requiere alimentación auxiliar de 5V micro-USB para energizar el circuito analógico-digital. Al energizarlo, la pantalla proyecta nítidamente el logo gráfico inicial de HP ProLiant.
-  * Durante la transición del logo gráfico (640×480) hacia el modo texto (720×400 / Option ROMs), el puerto VGA reinicia momentáneamente la señal de sincronismo, causando que algunos convertidores pierdan el bloqueo de reloj y la TV muestre *"No hay señal"*.
-* **Diagnóstico Acústico de Beeps de POST:**
-  * **2 beeps cortos:** Ocurrieron al encender el servidor con las charolas de discos SAS extraídas hacia afuera. La controladora Smart Array P410 detectó la ausencia del arreglo (`1785-Slot X Drive Array - Drive(s) Not Detected`) y detuvo el POST esperando confirmación interactiva (`Press <F1> to continue, <F2> to configure`).
-  * **1 beep corto:** Al volver a insertar los discos SAS en sus bahías y encender el servidor, sonó un único beep corto, el cual corresponde al código estándar de éxito de POST y transferencia de control hacia el dispositivo de arranque.
-* **Comportamiento del Sistema Operativo en Disco:**
-  * La pantalla de recuperación de Windows apareció tras el apagado previo ("Iniciar Windows normalmente") y continuó automáticamente hacia *"Aplicando la configuración del equipo"*.
-  * Esto confirmó la total integridad del hardware: placa base, CPUs Xeon, módulos de memoria ECC y controladora Smart Array P410 están al 100% operativos.
-  * Durante el arranque de Windows, la interfaz física `Ethernet` en la laptop registró actividad de recepción de red (+31 KB).
-* **Intervención y Validación de Teclado y Setup de BIOS:**
-  * Se confirmó la disponibilidad de teclado USB para la interacción directa con el firmware.
-  * Tecla de acceso confirmada al BIOS Setup: **`F10`** (o `Supr` / Delete).
-  * Firmware detectado: **AMI BIOS v02.61, ROMID 021, Fecha de Revisión 01/18/2011**.
-  * Detección de Procesador: Intel(R) Xeon(R) CPU E5504 @ 2.00GHz (1 CPU físico, 4 de 4 cores lógicos habilitados).
-  * Detección de Memoria: **`System Memory Size: 8192MB` (8 GB)** limpios y estables tras aislar los dos módulos nuevos VLP Micron/IBM 4 GB DDR3 ECC Registered en las ranuras primarias blancas `DIMM2A` y `DIMM4B`.
-  * Dirección MAC integrada: **`44-1E-A1-6E-D2-E4`** (HP NC107i Gigabit / Broadcom MBA v11.0.8).
-* **Bloqueo Definitivo de Windows y Configuración de Arranque:**
-  * El sistema preexistente en los discos SAS de 450 GB es **Windows Server 2008 R2 Enterprise** bajo el dominio gubernamental `gppan.senado.gob.mx\administrador` (bloqueado sin credenciales locales).
-  * Para erradicar el secuestro del ciclo de arranque por parte de Windows sin necesidad de formateo previo:
-    1. En la pestaña `Boot` del BIOS Setup se configuró:
-       - `1st Boot Device:` **`[CD/DVD]`**
-       - `2nd Boot Device:` **`[Network:MBA v11.0.]`**
-       - `3rd Boot Device:` **`[Disabled]`** ➔ Bloqueo definitivo del disco duro SAS (`Hard Drive`).
-    2. Comportamiento resultante: El servidor ya no puede cargar Windows Server. Tras agotar los intentos de lectura de CD y de negociación PXE, el BIOS entra en estado `Halt / Boot Failure`.
-    3. Comportamiento de vídeo Matrox G200e con conversor activo VGA a HDMI: Al cesar la actividad de arranque y entrar en reposo la CPU, la controladora gráfica apaga la sincronización de vídeo VGA, mostrando la TV LG el mensaje de **"Sin señal"**.
-    4. Tráfico PXE en tiempo real: Se verificó que la ROM Broadcom MBA v11.0 genera solicitudes `DHCP DISCOVER` repetitivas en el puerto 67 UDP hacia la laptop (`192.168.137.1`), lista para recibir paquetes de arranque de red.
-* **Arranque Exitoso del Kernel de Linux y Detección de Dispositivos (AlmaLinux 9):**
-  * **Almacenamiento SAS:** La controladora HP Smart Array P410 fue inicializada y reconocida como dispositivo SCSI primario: `sd 0:1:0:0: [sda] Attached SCSI disk` (`/dev/sda`), habilitando el particionamiento directo sobre el arreglo de 450 GB.
-  * **Controladora Gráfica y Framebuffer:** El driver del kernel `mgag200` tomó el chip gráfico Matrox G200e (`0000:03:00.0`), activando el framebuffer de consola `mgag200drmfb (fb0)` en resolución 128×48 caracteres. Esto restableció la señal de vídeo continua en la TV LG sin desconexiones.
-  * **Interfaz de Red Gigabit:** Driver `tg3` (Broadcom BCM5723) negoció enlace Gigabit a 1000 Mbps Full Duplex (`enp4s0: Link is up at 1000 Mbps, full duplex`).
-  * **Unidad Óptica:** Identificada como `hp DVDROM DH40N` (`scsi 3:0:0:0: CD-ROM`).
-  * **Resolución de Error SSL por Desfase Temporal del BIOS:** El instalador inicialmente arrojó `curl: (60) SSL certificate problem: certificate is not yet valid` debido a que el reloj del BIOS se encuentra en el año 2011 (`01/18/2011`), provocando que los certificados HTTPS actuales de los espejos fueran considerados no válidos. Se solventó redirigiendo los repositorios a HTTP plano (`http://repo.almalinux.org/...`) y agregando `inst.noverifyssl`, logrando la transferencia ininterrumpida de más de 1.4 GB de paquetes.
-
-
-================================================================================
-# FILE: wiki/entities/windows-laptop-node.md
-================================================================================
-
----
-type: entity
-title: "Nodo Workstation: Laptop Windows 11"
-description: "Estación de trabajo principal para desarrollo agéntico con Antigravity IDE, Ollama y consola de control"
-tags: [workstation, windows11, antigravity-ide, ollama, wsl2]
+type: concept
+title: "Afinamiento de Inferencia de IA en CPU Xeon Legada"
+description: "Estrategias de cuantización y compilación para inferencia de LLM en procesadores Intel Xeon sin soporte AVX2"
+tags: [ia, llm, llama-cpp, cuantizacion, sse4-2, xeon, cpu]
 created: 2026-11-22
 updated: 2026-11-22
 ---
 
-# Nodo Workstation: Laptop Windows 11 (`windows-laptop-node`)
+# Afinamiento de Inferencia de IA en CPU Xeon Legada
 
-## 1. Identificación y Rol
+## 1. Desafío Arquitectónico: Ausencia de AVX2
 
-* **Sistema Operativo:** Windows 11 Pro con subsistema WSL 2 (Ubuntu 20.04 LTS).
-* **Entorno de Desarrollo:** Antigravity IDE (agente AI integrado con servidores MCP y LLM Wiki).
-* **Motor de Inferencia Local:** Ollama Desktop para modelos locales de asistencia (`qwen3:8b-8k`, `gemma4`).
-* **Propósito:** Estación de trabajo para el programador. Proporciona los periféricos físicos (pantalla, teclado y ratón) para administrar el servidor HP ProLiant a través de la red local.
+Los procesadores Intel Xeon de la generación Nehalem y Westmere (LGA1366) carecen de los conjuntos de instrucciones vectoriales AVX y AVX2. Su límite vectorial se encuentra en **SSE4.2**. La mayoría de binarios precompilados modernos de PyTorch, TensorFlow o `llama.cpp` fallan con error de instrucción ilegal (`Illegal instruction (core dumped)`) si se ejecutan directamente.
 
-## 2. Conectividad con el Servidor
+## 2. Soluciones y Reglas de Optimización
 
-* Conexión vía WiFi hacia el punto de acceso / repetidor compartido con el servidor.
-* Sesiones de terminal OpenSSH y visualización del panel web de Cockpit en navegador.
-* Gestión de repositorios en GitHub mediante `gh` CLI y flujos CI/CD.
-
-
-================================================================================
-# FILE: wiki/systems/nextjs-dashboard.md
-================================================================================
-
----
-type: system
-title: "Frontend Next.js en GitHub Pages"
-description: "Panel de control estático con autenticación en cliente para monitoreo de telemetría y estado de servidores"
-tags: [nextjs, react, tailwindcss, typescript, github-pages, ssg]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Frontend Next.js en GitHub Pages (`dashboard`)
-
-## 1. Arquitectura de Exportación Estática
-
-La aplicación está construida sobre **Next.js 14+** con App Router y configurada con `output: 'export'`. Esto permite que el sitio se compile a un conjunto de ficheros HTML, JS y CSS listos para ser servidos por la infraestructura CDN de GitHub Pages sin costo.
-
-## 2. Componentes Clave
-
-1. **`AuthGuard.tsx`**: Componente de orden superior que intercepta la navegación. Comprueba la validez del token JWT almacenado en `sessionStorage`; si expira o no existe, redirige de inmediato a `/login`.
-2. **`ServerMetrics.tsx`**: Representación gráfica y métricas en tiempo real de porcentaje de CPU por hilo, memoria RAM ocupada, swap, temperatura y latencia de red.
-3. **`AiStatus.tsx`**: Monitor del motor de inferencia local. Indica el modelo activo, velocidad de procesamiento en tokens por segundo (tok/s) y latencia al primer token (TTFT).
-4. **`MiningStatus.tsx`**: Panel de telemetría de XMRig con hashrate instantáneo (H/s), hilos asignados, shares validados y estado del semáforo de gobernanza de recursos.
-5. **`lib/crypto.ts`**: Utilidad criptográfica cliente que calcula el resumen SHA-256 o PBKDF2 de la contraseña antes de su transmisión a la API.
-
-## 3. Parámetros de Configuración (`next.config.mjs`)
-- `basePath`: `'/xeon-nexus-sentinel'`
-- `trailingSlash`: `true`
-- `images`: `{ unoptimized: true }`
-
-
-================================================================================
-# FILE: wiki/systems/cloud-relay-api.md
-================================================================================
-
----
-type: system
-title: "Cloud Relay API en Python (FastAPI)"
-description: "Microservicio REST intermediario para ingesta y distribución de telemetría en nubes SaaS gratuitas"
-tags: [fastapi, python, cloud-relay, koyeb, zeabur, render, jwt]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Cloud Relay API en Python (`cloud-relay`)
-
-## 1. Propósito de la Capa de Intermediación
-
-Debido a que el servidor HP ProLiant se encuentra tras una conexión de banda ancha residencial (NAT de doble capa o Carrier-Grade NAT sin IP pública fija) y el frontend se ejecuta como archivos estáticos en GitHub Pages, el **Cloud Relay** actúa como puente público seguro de baja latencia.
-
-## 2. Endpoints Expuestos
-
-| Método | Ruta | Autenticación | Función |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/telemetry` | Encabezado `X-Server-Token` | Recibe payload JSON del daemon en AlmaLinux y lo almacena en RAM circular |
-| `GET` | `/api/telemetry/latest` | `Bearer <JWT_TOKEN>` | Devuelve la instantánea más reciente de métricas al frontend |
-| `GET` | `/api/telemetry/history` | `Bearer <JWT_TOKEN>` | Devuelve una serie temporal con las últimas 100 muestras |
-| `POST` | `/api/auth/login` | Público (Body JSON) | Valida usuario y contraseña cifrada emitiendo un JWT firmado |
-| `GET` | `/api/health` | Público | Comprobación de estado para keep-alive y monitorización de uptime |
-
-## 3. Aislamiento y Memoria Volátil
-
-- El servicio mantiene un buffer circular `deque(maxlen=100)` en memoria volátil de Python.
-- No utiliza bases de datos externas como PostgreSQL o Redis, garantizando un consumo de RAM inferior a 70 MB y adaptándose al nivel gratuito de Koyeb, Zeabur o Render.
-
-
-================================================================================
-# FILE: wiki/systems/almalinux-daemon.md
-================================================================================
-
----
-type: system
-title: "Daemon de Telemetría en AlmaLinux 9"
-description: "Servicio en segundo plano para recolección de métricas de CPU, RAM, temperatura, IA y minería en AlmaLinux 9"
-tags: [almalinux, daemon, python, telemetria, systemd]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Daemon de Telemetría en AlmaLinux 9 (`xeon-sentinel`)
-
-## 1. Responsabilidad y Funcionamiento
-
-El daemon de telemetría reside en el servidor HP ProLiant ML150 G6 operando sobre **AlmaLinux 9 Minimal**. Su propósito es inspeccionar el estado del hardware, los procesos de inferencia local (`llama.cpp` o Ollama) y el minero XMRig (RandomX), empaquetando periódicamente un objeto JSON que se despacha vía HTTP POST al Cloud Relay.
-
-## 2. Métricas Recolectadas
-
-1. **CPU y Frecuencia:** Lectura diferencial de `/proc/stat` y `/proc/cpuinfo` calculando el porcentaje de uso por núcleo e integral.
-2. **Memoria y NUMA:** Lectura de `/proc/meminfo` (MemTotal, MemFree, Buffers, Cached) y desglose de páginas locales vs remotas vía `numastat`.
-3. **Sensores Térmicos:** Extracción mediante `sysfs` (`/sys/class/thermal/` o `coretemp`) o comando IPMI BMC.
-4. **Estado de IA Local:** Sonda HTTP hacia el endpoint `/api/tags` o `/api/ps` de Ollama / `llama.cpp` server para medir modelos cargados y tiempos de generación.
-5. **Estado de Criptominería:** Consulta al endpoint HTTP local de XMRig (`http://127.0.0.1:18088/1/summary`) extrayendo hashrate a 10s, 60s, 15m y temperatura de encapsulado.
-
-## 3. Configuración y Ejecución
-
-- **Archivo de Configuración:** `server/daemon/config.yaml`
-- **Servicio Systemd:** `server/systemd/xeon-sentinel.service`
-- **Cadencia de Publicación:** Cada 5 segundos en condiciones normales, con reintentos exponenciales ante fallos de red.
-
-
-================================================================================
-# FILE: wiki/systems/headless-pxe-netboot.md
-================================================================================
-
----
-title: "Arquitectura de Despliegue Headless PXE Netboot para HP ProLiant ML150 G6"
-description: "Servidor PXE/TFTP/HTTP autonomo en Python para instalacion desatendida de AlmaLinux 9 en servidores sin monitor ni teclado."
-category: "systems"
-date: "2026-11-23"
-status: "active"
-tags: ["pxe", "netboot", "tftp", "http", "ipxe", "kickstart", "almalinux9", "headless"]
----
-
-# Arquitectura de Despliegue Headless PXE Netboot
-
-## 1. Contexto y Desafio Tecnico
-El servidor **HP ProLiant ML150 G6** es un nodo de computo empresarial:
-- Controlador de almacenamiento interno: HP Smart Array P410 / SAS-SATA con discos configurados.
-- Sistema operativo preexistente en disco: **Windows Server 2008 R2 Enterprise**.
-- Prioridad de arranque del BIOS: Da preferencia al disco duro interno sobre el arranque por red PXE.
-- Sin monitor ni teclado USB externo conectado directamente al servidor (pantalla verificada por HDMI en TV mediante conversor VGA a HDMI con alimentacion USB).
-- Medios disponibles en laptop: Grabadora externa USB **PHILIPS CDRW/DVD SCB5265 (Unidad E:)** y discos virgenes **CD-R (700 MB)**.
-
-## 2. Estrategia de Arranque Hibrido: CD-R iPXE + Red Gigabit (PXE/HTTP)
-Dado que la imagen oficial `AlmaLinux-9-boot.iso` pesa 1.55 GB y excede la capacidad fisica de un CD-R (700 MB maximo, requiere DVD):
-1. Se emplea **iPXE ISO (`ipxe.iso`, ~9 MB)** grabada en el CD-R.
-2. El BIOS del HP ProLiant ML150 G6 prioriza de fabrica la unidad lectora frontal DVD/CD sobre los discos duros internos.
-3. El CD-R arranca iPXE en menos de 2 segundos sin requerir intervencion de teclado.
-4. iPXE se comunica por el puerto inferior Gigabit (`1/Mgmt`) con el servidor autonomo en la laptop (`192.168.137.1:8000`).
-5. Descarga `vmlinuz` (14.62 MB) e `initrd.img` (218.16 MB) por HTTP a 1 Gbps e inicia la instalacion desatendida via Kickstart (`ks.cfg`).
-
-```text
-[ Laptop Windows 11 ] (Gateway: 192.168.137.1)
-  │  ├── Conexión Compartida (ICS): Enruta tráfico de Wi-Fi hacia Ethernet
-  │  ├── Servidor HTTP (Puerto 8000): Sirve boot.ipxe, ks.cfg, vmlinuz e initrd.img
-  │  ├── Servidor TFTP (Puerto 69): Sirve undionly.kpxe (iPXE)
-  │  └── Servidor DHCP/ProxyDHCP (Puerto 67): Responde con opciones PXE dinámicas
-  │
-  ▼ (Cable Ethernet Gigabit - 1 Gbps)
-[ HP ProLiant ML150 G6 ] (Puerto Inferior 1/Mgmt - NC107i Gigabit)
-  1. BIOS PXE ROM solicita IP -> Recibe 192.168.137.50 y next-server=undionly.kpxe
-  2. TFTP descarga undionly.kpxe en ~150 ms
-  3. iPXE arranca -> Solicita DHCP con Opción 175
-  4. DHCP detecta iPXE -> Entrega URL http://192.168.137.1:8000/boot.ipxe
-  5. iPXE descarga vmlinuz (~15 MB) e initrd.img (~228 MB) por HTTP a 1 Gbps (~2-3 seg)
-  6. Anaconda inicia en modo texto desatendido leyendo ks.cfg
-  7. Instalación automatizada completa de AlmaLinux 9 y reinicio con OpenSSH activo
-```
-
-## 3. Resolucion del Bucle Infinito de iPXE
-Para evitar que el cliente iPXE descargue cíclicamente su propio binario en entornos headless, el servidor DHCP implementa discriminación por cabeceras RFC 2132 / RFC 3925:
-- **Cliente BIOS Estándar (Sin Opción 175):** Se le entrega `undionly.kpxe` vía TFTP.
-- **Cliente iPXE (Con Opción 175 o User-Class 'iPXE'):** Se le entrega la directiva HTTP directa `http://192.168.137.1:8000/boot.ipxe`.
-
-## 4. Parametros Kickstart (ks.cfg) para Operacion Headless
-- Modo texto estricto (`text`, `skipx`).
-- Aceptación automática de licencia (`eula --agreed`).
-- Particionamiento automático MBR/BIOS (`bootloader --location=mbr`, `clearpart --all --initlabel`, `autopart --type=plain`).
-- Red por DHCP en enlace activo (`network --bootproto=dhcp --device=link --activate --onboot=yes`).
-- Contraseña de root preconfigurada (`rootpw --plaintext nexusadmin2026!`).
-- SSH habilitado automáticamente (`services --enabled="sshd"`).
-- Reinicio automático al terminar (`reboot`).
-
-## 5. Pruebas de Diagnóstico y Resultados de Campo con el Servidor (Noviembre 2026)
-
-Durante las sesiones de laboratorio y pruebas en vivo con el HP ProLiant ML150 G6 se ejecutaron y validaron los siguientes componentes:
-
-### 5.1 Diagnóstico de Video y Descubrimiento del Estado del Servidor
-- **Prueba:** Conexión del puerto VGA trasero hacia TV mediante adaptador activo VGA a HDMI.
-- **Resultado:** El convertidor activo requería alimentación externa de 5V micro-USB para energizar el circuito analógico-digital. Al energizarlo por USB, la señal de video apareció de forma inmediata.
-- **Hallazgo:** La pantalla reveló que el servidor tiene preinstalado **Windows Server 2008 R2 Enterprise** en un arreglo SAS RAID administrado por la controladora **HP Smart Array P410**.
-
-### 5.2 Pruebas de Red y Sondeo DHCP/ICS
-- **Entorno:** Conexión compartida a Internet (ICS) en Windows 11 sobre el segmento `192.168.137.0/24` (laptop como Gateway en `192.168.137.1`).
-- **Scripts de Diagnóstico con Timeouts Estrictos (Mandato 6):**
-  - `scripts/scan-ics-range.ps1`: Escaneo paralelo de direcciones IP en la subred ICS.
-  - `scripts/detect-ilo.ps1`: Sondeo de puertos HTTP (80) y HTTPS (443) para identificar la interfaz HP iLO 100i con timeout de 2 segundos por nodo.
-  - `scripts/monitor-hp-ip.ps1`: Monitoreo continuo de solicitudes ARP y asignaciones de IP para el servidor.
-  - `scripts/check-dhcp-leases.ps1`: Inspección de concesiones de red emitidas por ICS.
-  - `scripts/sniff-broadcasts.ps1` y `scripts/sniff-ports.ps1`: Captura no bloqueante de tramas DHCP UDP 67/68 y TFTP UDP 69.
-- **Conclusión de Red:** El servidor físico no realizaba broadcast DHCP PXE durante el encendido debido a que la secuencia de arranque del BIOS priorizaba el disco duro interno Smart Array P410.
-
-### 5.3 Implementación y Verificación del Servidor PXE Autónomo
-- **Componente:** `scripts/headless_pxe_server.py` implementado en Python estándar sin dependencias externas pesadas.
-- **Servicios Integrados:**
-  - Servidor DHCP/ProxyDHCP en puerto UDP 67.
-  - Servidor TFTP en puerto UDP 69 sirviendo `undionly.kpxe`.
-  - Servidor HTTP en puerto TCP 8000 sirviendo `boot.ipxe`, `ks.cfg`, `vmlinuz` (14.62 MB) e `initrd.img` (218.16 MB).
-- **Control de Bucle:** Discriminación de Opción 175 verificada para entrega directa del script de arranque HTTP al detectar clientes iPXE.
-- **Lanzador Rápido:** Creación de `iniciar-servidor-pxe.bat` para ejecución en Windows 11 con elevación de privilegios de red.
-
-### 5.4 Grabación Desatendida de iPXE en CD-R
-- **Desafío:** Imposibilidad de grabar el ISO completo de AlmaLinux 9 (1.55 GB) en un CD-R virgen (700 MB) y ausencia de teclado físico USB conectado al servidor para cambiar el orden de arranque en el BIOS.
-- **Solución:** Grabación de la imagen ultraligera `ipxe.iso` (9 MB) en CD-R.
-- **Herramienta:** Creación de `scripts/burn-iso.ps1`, automatizando `C:\Windows\System32\isoburn.exe /Q E: C:\Users\lenin\pxeboot\ipxe.iso` sobre la unidad óptica externa PHILIPS CDRW/DVD SCB5265 (Unidad E:).
-- **Resultado:** Grabación de pistas finalizada exitosamente con código de salida 0, lista para ser leída por la lectora frontal del servidor y conectar por Gigabit al servidor PXE de la laptop.
-
-### 5.5 Diagnóstico de Beeps del BIOS, Arreglo SAS y Validación de Hardware
-- **Comportamiento con Discos Extraídos (2 Beeps Cortos):**
-  - Al extraer las dos charolas de discos SAS frontales hacia afuera para evitar el inicio de Windows Server, la controladora Smart Array P410 emitió 2 beeps cortos y pausó el POST en la advertencia `1785-Slot X Drive Array - Drive(s) Not Detected (Press F1 to continue)`.
-  - Sin confirmación, el servidor se mantuvo esperando en pausa preventiva.
-- **Comportamiento con Discos Reinsertados (1 Beep Corto):**
-  - Al reinsertar y bloquear las dos charolas de discos SAS (450 GB 15K RPM HP Spare 517352-001) y reiniciar, el servidor emitió un único beep corto (POST exitoso y saludable).
-  - El BIOS reconoció 8192 MB (8 GB) limpios en las ranuras primarias blancas `DIMM2A` y `DIMM4B` con módulos Micron/IBM DDR3 ECC Registered.
-
-### 5.6 Configuración del BIOS Setup y Bloqueo Definitivo de Windows
-- **Acceso a Setup de Firmware:** Entrada interactiva confirmada con tecla **`F10`** (o `Supr` / Delete).
-- **Parámetros Validados:**
-  - Placa Base: HP ProLiant ML150 G6, ROMID 021, ROM Revision 01/18/2011.
-  - Procesador: Intel Xeon E5504 @ 2.00GHz (1 procesador físico, 4 cores).
-  - Red Onboard: MAC `44:1E:A1:6E:D2:E4` (HP NC107i / Broadcom MBA v11.0.8).
-  - Prioridad de Arranque USB: `USB Device Boot Priority: [High]`.
-- **Orden de Arranque Establecido (Pestaña Boot):**
-  - `1st Boot Device:` **`[CD/DVD]`**
-  - `2nd Boot Device:` **`[Network:MBA v11.0.]`**
-  - `3rd Boot Device:` **`[Disabled]`** (📌 Deshabilitación total de `[Hard Drive]`).
-- **Efecto de Bloqueo:** El sistema preexistente Windows Server 2008 R2 Enterprise (dominio gubernamental `gppan.senado.gob.mx\administrador`) queda 100% inhabilitado para arrancar.
-- **Estado de Halt y Señal de Vídeo:** Al fallar la lectura del CD y agotarse los intentos de PXE, el BIOS ejecuta un ciclo de Halt / Boot Failure. La controladora gráfica Matrox G200e desconecta la sincronización VGA analógica, provocando que el conversor activo muestre en la TV LG el mensaje de **"Sin señal"**.
-
-### 5.7 Refactorización del Servidor PXE Autónomo (Subnet Directed Broadcast)
-- **Diagnóstico del Fallo de Negociación DHCP:**
-  - En Windows 11 con múltiples interfaces activas (Wi-Fi + Ethernet Realtek + adaptadores virtuales VMware/WSL), los paquetes dirigidos a la dirección de difusión universal `255.255.255.255:68` son enrutados por el kernel hacia la interfaz con la ruta predeterminada (Wi-Fi), impidiendo que el cliente en el enlace directo Ethernet reciba el `DHCPOFFER`.
-  - La inclusión de la Opción DHCP 60 (`PXEClient`) en el puerto 67 instruye al cliente PXE a ignorar el `bootfile` y buscar un ProxyDHCP externo en el puerto 4011.
-- **Correcciones Implementadas en `headless_pxe_server.py`:**
-  1. **Subnet Directed Broadcast:** Se transmite tanto a `192.168.137.255:68` como a `255.255.255.255:68`, garantizando la salida física del paquete por la NIC Ethernet local.
-  2. **Depuración de Opción 60:** Eliminación de la Opción 60 en las respuestas del puerto 67, permitiendo que la ROM Broadcom MBA v11.0 tome el `bootfile` (`undionly.kpxe`) y la IP TFTP (`192.168.137.1`) de forma directa y unificada.
-  3. **Multi-Socket Binding:** Enlace concurrente en `192.168.137.1:67/4011/69` y `0.0.0.0:67/4011/69` con hilos dedicados para TFTP y HTTP.
-
-### 5.8 Resolución de Error SSL por Reloj de BIOS y Despliegue de BaseOS
-- **Incidente de Certificados No Válidos (`curl: (60) SSL certificate problem`):**
-  - Al iniciar el ramdisk Anaconda y cargar `dracut-initqueue`, la descarga de la imagen del instalador (`stage2`) falló repetidamente contra `https://repo.almalinux.org/...`.
-  - Causa Raíz: El reloj en tiempo real (RTC) del servidor HP se encontraba en `Tue 01/18/2011` debido a la pila de BIOS agotada. Para las herramientas criptográficas modernas en 2011, los certificados SSL/TLS emitidos en 2025/2026 figuran con fecha futura (`certificate is not yet valid`).
-- **Remediación en Tiempo Real en `boot.ipxe` y `ks.cfg`:**
-  - Redirección del origen de paquetes a protocolo HTTP plano: `http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os/`.
-  - Incorporación de parámetros de bypass de verificación en la línea de comando del kernel y Kickstart: `inst.noverifyssl` y `--noverifyssl`.
-- **Resultado del Despliegue en Vivo:**
-  - Descarga exitosa de `vmlinuz` (14 MB), `initrd.img` (218 MB), `boot.ipxe` y `ks.cfg` por HTTP local en el puerto 8000.
-  - Activación del framebuffer de consola Matrox G200e (`mgag200drmfb`) en resolución de 128×48 caracteres.
-  - Transferencia ininterrumpida de más de 1.4 GB de paquetes RPM base mediante la conexión compartida ICS de la laptop a velocidades de ~12 MB/s, procediendo al particionado desatendido del arreglo Smart Array P410 (`/dev/sda`).
-
-### 5.9 Despacho de Arranque Multi-Opción con Fallback a Disco SAS (`sanboot 0x80`)
-- **Desafío:** Pérdida recurrente de configuración en NVRAM del BIOS (batería CR2032 agotada) que revierte el equipo a los valores de fábrica de 2011, provocando bucles si el usuario no interviene en menos de 1 segundo en el menú BBS.
-- **Solución iPXE:** Transformación de `boot.ipxe` en un menú selectivo con timeout de 3 segundos:
-  - Opción por defecto: `sanboot --no-describe --drive 0x80` (ejecuta INT 13h directo sobre el MBR de la controladora Smart Array P410).
-  - Opciones secundarias: Modo Rescate de Linux por red (`inst.rescue`) y Reinstalación desatendida Kickstart (`:reinstall`).
-- **Resguardo y Versionado Oficial:** Copia de respaldo en `boot.ipxe.installer-backup` e incorporación de toda la suite de arranque (`headless_pxe_server.py`, `ks.cfg`, `boot.ipxe`) dentro del repositorio rastreado por Git en `server/pxe/` (Commit `39d8342`).
+1. **Compilación Nativa de `llama.cpp`:**
+   - La herramienta debe compilarse desde el código fuente desactivando AVX y activando SSE4.2:
+     `cmake -B build -DLLAMA_AVX=OFF -DLLAMA_AVX2=OFF -DLLAMA_FMA=OFF -DLLAMA_F16C=OFF`
+2. **Selección de Modelos Cuantizados:**
+   - Para CPUs con ancho de banda de memoria limitado (DDR3 ECC), los modelos óptimos son de 1B a 3B parámetros con cuantización agresiva `Q4_K_M` o `Q3_K_M`.
+   - Ejemplos recomendados: Llama-3.2-1B-Instruct, Qwen2.5-0.5B / 1.5B, SmolLM2-1.7B.
+3. **Mapeo en Memoria y Bloqueo de Paginación:**
+   - Se debe utilizar la bandera `--mlock` para impedir que el sistema operativo mueva los pesos del modelo al espacio de intercambio (swap) en disco.
+4. **Asignación de Hilos:**
+   - El número de hilos de cómputo (`-t`) debe coincidir exactamente con el número de núcleos físicos del socket asignado (excluyendo Hyper-Threading para evitar contención de caché L1/L2).
 
 
 ================================================================================
@@ -649,6 +311,249 @@ Los comandos de prueba de conectividad, verificación de URLs, comprobaciones de
 
 ### Regla 3: Tareas de Fondo Exclusivas para Cargas Pesadas
 Solo las transferencias de datos masivas (como respaldos de gigabytes con `rclone` o compilaciones de software extensas) tienen permitido ejecutarse en segundo plano, e incluso estas deben incluir telemetría periódica (`--stats 10s`) y un informe inmediato al usuario sin bloquear la conversación.
+
+
+================================================================================
+# FILE: wiki/concepts/headless-boot-diagnostics-and-telemetry.md
+================================================================================
+
+---
+type: concept
+title: "Diagnóstico de Arranque Headless, Telemetría de Capa de Enlace y Automatización de iPXE"
+description: "Patrones de diagnóstico sin monitor para servidores legados con fallas de sincronismo de vídeo, telemetría por velocidad de enlace PHY (100M/1G) y arranque asistido por iPXE"
+tags: [headless, pxe, ipxe, telemetry, matrox-g200, diagnostics, sanboot, cr2032, bios]
+created: 2026-11-26
+updated: 2026-11-26
+---
+
+# Diagnóstico de Arranque Headless, Telemetría de Capa de Enlace y Automatización de iPXE
+
+Este documento compendia las técnicas avanzadas de telemetría de red, monitoreo de estados de hardware sin monitor y automatización de arranque diseñadas para operar con el nodo servidor **HP ProLiant ML150 G6** cuando la salida de vídeo analógica (Matrox G200e + conversor activo VGA-HDMI) es inestable o efímera.
+
+---
+
+## 1. El Desafío Físico: Cegueras Visuales en Hardware Legado
+
+En servidores empresariales torre de generación G6/G7 (2009-2011), el monitoreo visual tradicional mediante monitores HDMI comerciales falla por tres razones físicas:
+1. **Pérdida de Sincronismo del DAC Analógico:** El chip gráfico integrado **Matrox G200e** altera repetidamente sus frecuencias de refresco horizontal y vertical al conmutar entre el logotipo gráfico inicial (640×480 @ 60Hz), el modo texto del BIOS AMI (720×400 @ 70Hz), las Option ROMs de controladoras PCIe y el framebuffer del kernel Linux (`mgag200drmfb`).
+2. **Desconexión del Conversor Activo VGA-HDMI:** Los conversores analógico-digitales comerciales pierden el enganche de fase (Phase-Locked Loop / PLL) ante transiciones de vídeo de menos de 500 ms, provocando que los televisores modernos (como LG) entren en modo de ahorro de energía (*"No signal / Power Saving Mode"*).
+3. **Brevedad de Mensajes Críticos en Pantalla:** Avisos como `Press <ESC> to boot....1` duran exactamente un segundo antes de que la BIOS tome la decisión de arranque por defecto, haciendo humanamente imposible la verificación o captura visual interactiva.
+
+---
+
+## 2. Telemetría de Capa de Enlace (L2/PHY) como Monitor de Estado
+
+Ante la ausencia de vídeo, el estado del hardware del servidor se infiere con precisión milimétrica analizando la velocidad de enlace (*LinkSpeed*) y el tráfico de tramas en la tarjeta de red Gigabit integrada (HP NC107i / Broadcom BCM5723):
+
+```text
+[Servidor Apagado / Standby]  ---> Link: Desconectado o 10 Mbps (solo BMC/iLO si está energizado)
+[POST de BIOS / Setup F10]    ---> Link: 100 Mbps (Broadcom PHY en modo ahorro/compatibilidad BIOS)
+[Option ROM Broadcom MBA]     ---> Link: 100 Mbps o 1 Gbps (Peticiones DHCP DISCOVER en puerto UDP 67)
+[Kernel Linux / Driver tg3]   ---> Link: 1 Gbps (Negociación Full Duplex Gigabit 1000 Mbps)
+```
+
+### Regla Diagnóstica de Transición de Velocidad:
+* **Si el enlace salta de 100 Mbps a 1 Gbps:** Significa inequívocamente que el hardware del servidor superó el POST y el kernel de Linux (o el firmware avanzado de red) tomó el control del bus PCI Express e inicializó el controlador `tg3`. La falta de imagen es 100% atribuible al conversor de vídeo.
+* **Si el enlace permanece en 100 Mbps indefinidamente:** El servidor continúa en la fase de BIOS o se encuentra en pausa por advertencia interactiva (`Press <F1> to continue` o `Press <ESC> to boot`).
+
+---
+
+## 3. Resiliencia Ante la Pérdida de NVRAM/CMOS (Batería CR2032)
+
+Cuando la batería de litio CR2032 de la placa base se encuentra agotada (0.0 V):
+1. **Microcaída de Tensión en Reinicio:** Durante un reinicio por software (*warm reset*), la línea de voltaje principal cae temporalmente para resetear el Southbridge (ICH10R). Sin la batería de 3V para sostener los registros CMOS, se genera un error de suma de verificación (*CMOS Checksum Bad*) y la placa carga los valores por defecto de fábrica de 2011.
+2. **Estrategia de Mitigación por Red (Fallback de Fábrica):**
+   * En los valores de fábrica, la BIOS del ML150 G6 busca unidades ópticas y luego ejecuta de forma obligatoria el arranque por red **PXE (`Network:MBA`)**.
+   * Esto permite utilizar la laptop como un **orquestador maestro de rescate** que no depende de la memoria de la placa base.
+
+---
+
+## 4. Arquitectura de Arranque Automatizado con iPXE (`sanboot 0x80`)
+
+Para garantizar que el servidor siempre cargue AlmaLinux 9 instalado en los discos duros SAS de la controladora Smart Array P410 sin importar la pérdida de configuración del BIOS, el script `boot.ipxe` en la laptop implementa un despachador inteligente:
+
+```ipxe
+#!ipxe
+set menu-timeout 3000
+set submenu-timeout ${menu-timeout}
+
+:start
+menu Xeon Nexus Sentinel - Menu de Inicio Automatizado
+item --default --key s local_sas  [S] Arrancar AlmaLinux 9 desde Disco SAS Local (0x80)
+item --key r rescue_boot          [R] Arrancar Modo Rescate de Linux por Red
+item --key i reinstall            [I] Reinstalar AlmaLinux 9 (Kickstart Automatico)
+choose --timeout ${menu-timeout} --default local_sas target && goto ${target}
+
+:local_sas
+echo Arrancando AlmaLinux 9 desde disco SAS local (0x80)...
+sanboot --no-describe --drive 0x80 || goto fallback_exit
+
+:fallback_exit
+echo [AVISO] sanboot fallo o no respondio. Saliendo de iPXE...
+exit 1
+```
+
+### Mecánica de Ejecución:
+1. El servidor arranca por PXE y descarga `undionly.kpxe` vía TFTP.
+2. iPXE ejecuta `boot.ipxe` por HTTP local (puerto 8000).
+3. Tras una cuenta regresiva de 3 segundos, `sanboot --no-describe --drive 0x80` invoca directamente la interrupción BIOS INT 13h sobre el dispositivo `0x80` (el arreglo RAID 1 de 419 GB de la Smart Array P410).
+4. El MBR de AlmaLinux 9 toma el control y carga el sistema operativo de forma desatendida.
+
+---
+
+## 5. Matriz de Scripts de Diagnóstico Robusto (Suite Headless)
+
+Para diagnosticar sin depender de la salida de vídeo, se establecen cuatro monitores automáticos en la estación de control:
+
+| Script | Propósito | Detección Clave |
+| :--- | :--- | :--- |
+| `monitor-link-speed.ps1` | Monitorea la velocidad de enlace físico (100M vs 1G). | Distingue entre estado BIOS (100M) y estado Linux Kernel (1G). |
+| `sniff-dhcp-traffic.py` | Escucha pasiva de tramas DHCP DISCOVER/REQUEST en puerto 67 UDP. | Identifica si el servidor está en fase de arranque PXE ROM o de cliente OS. |
+| `scan-active-ssh.py` | Barrido asíncrono con timeout corto (0.3 s) sobre subred `192.168.137.0/24`. | Detecta la apertura inmediata del puerto 22 SSH al terminar el boot. |
+| `recover-vga-hdmi.bat` | Reseteo por software de alimentación de concentradores USB vinculados al conversor. | Fuerza el reenganche de fase analógica en pantallas externas. |
+
+---
+
+## 6. Firma de Eventos de Carga Masiva y Mitigación Vía B
+
+Durante las pruebas de despliegue en vivo se identificó el patrón de telemetría característico de un desbordamiento de ramdisk en BIOS Legacy:
+
+```text
+[T+00s] Enlace Ethernet pasa a Up a 1 Gbps (Tarjeta Broadcom activa en PXE)
+[T+05s] DHCP DISCOVER (BIOS PXE ROM) -> DHCPOFFER -> TFTP undionly.kpxe (80 KB)
+[T+08s] iPXE Client solicita boot.ipxe por HTTP (200 OK)
+[T+10s] Descarga masiva HTTP: vmlinuz (15 MB) e initrd.img (228 MB) a ~50 MB/s
+[T+15s] Fin de transferencia de 243 MB (LED de red parpadea intensamente)
+[T+45s] Silencio de red -> DHCP DISCOVER (BIOS PXE ROM) cíclico
+```
+
+### Diagnóstico Forense:
+* La BIOS AMI de 2011 no logra mapear contiguamente un ramdisk de 228 MB al descomprimirse en memoria real (alcanza 700+ MB), colisionando con el área EBDA o buffers de la Smart Array P410 y disparando una excepción de CPU (*Triple Fault*).
+* El parámetro deprecado `vga=normal` en kernels modernos de RHEL 9 (5.14+) acelera el pánico de kernel al intentar ejecutar llamadas de selector de vídeo de 16 bits inexistentes.
+
+### Solución Vía B (Oficial AlmaLinux 9):
+1. **Separación de Etapas:** Incorporación de `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os` en los parámetros de kernel en `boot.ipxe`, permitiendo a Dracut cargar el entorno de Anaconda bajo demanda por HTTP.
+2. **Purga de Parámetros de Vídeo de 16 bits:** Eliminación estricta de `vga=normal` y fijación de `nomodeset inst.text console=tty0 console=ttyS0,115200n8`.
+3. **Kickstart Permisivo:** Inclusión de `selinux --permissive` y sincronización con `chronyd` para desacoplar el arranque de la fecha de 2011 de la batería CMOS agotada.
+
+
+================================================================================
+# FILE: wiki/concepts/randomx-cache-isolation.md
+================================================================================
+
+---
+type: concept
+title: "Aislamiento de Recursos y Caché L3 en Minería RandomX"
+description: "Fórmula de dimensionamiento de hilos para RandomX basada en 2 MB de caché L3 y gobernanza contra la inferencia de IA"
+tags: [randomx, xmrig, cache-l3, numa, mineria, cpu, xeon]
+created: 2026-11-22
+updated: 2026-11-22
+---
+
+# Aislamiento de Recursos y Caché L3 en Minería RandomX
+
+## 1. La Regla de Oro de RandomX (2 MB L3 por Hilo)
+
+El algoritmo RandomX utilizado por Monero está diseñado para resistir ASICs mediante el uso intensivo de la memoria caché de nivel 3 (L3 Cache) y accesos de memoria aleatorios con alta sensibilidad a la latencia.
+
+Cada hilo de minería en RandomX requiere estrictamente **2 MB de memoria caché L3**.
+
+### Cálculo de Hilos Máximos
+
+Para dimensionar los hilos de XMRig sin saturar el procesador:
+
+`Hilos Máximos = Piso(Caché L3 Total en MB / 2)`
+
+Por ejemplo:
+- Intel Xeon E5520 (8 MB Caché L3): Hilos Máximos = 8 / 2 = 4 hilos.
+- Intel Xeon X5670 (12 MB Caché L3): Hilos Máximos = 12 / 2 = 6 hilos.
+
+Si se configuran más hilos de los permitidos por la caché física, los hilos excedentes deben acceder a la memoria RAM DDR3 para buscar los datos de Scratchpad, multiplicando la latencia por un factor de 10× y provocando una caída catastrófica del hashrate global.
+
+## 2. Competencia de Memoria: IA vs Minería
+
+Tanto la inferencia de modelos de lenguaje en CPU como la minería RandomX saturan por completo los canales de memoria del bus IMC. Ejecutar ambas tareas en paralelo degrada el rendimiento de la IA a menos de 1 token por segundo y reduce el hashrate en más del 70%.
+
+### Algoritmo del Gobernador (`ai-miner-governor.sh`)
+
+1. El script vigila la presencia de peticiones de inferencia activas en el puerto de Ollama / `llama.cpp`.
+2. Al detectar inferencia en curso:
+   - Envía comando HTTP `POST /1/pause` al minero XMRig.
+   - Libera el 100% del ancho de banda del bus de memoria y núcleos para el modelo de IA.
+3. Al concluir la generación del texto:
+   - Envía comando HTTP `POST /1/resume` al minero.
+   - Restablece la minería de fondo.
+
+
+================================================================================
+# FILE: wiki/concepts/secrets-management-and-gitguardian.md
+================================================================================
+
+---
+type: concept
+title: "Gestión Segura de Credenciales y Validación con GitGuardian"
+description: "Estrategias de protección de secretos, aislamiento de contraseñas en hosting estático y uso del nivel gratuito de GitGuardian"
+tags: [seguridad, secretos, gitguardian, ggshield, devsecops, jwt]
+created: 2026-11-22
+updated: 2026-11-22
+---
+
+# Gestión Segura de Credenciales y Validación con GitGuardian
+
+## 1. ¿Por Qué las Credenciales NO Quedan Expuestas en GitHub?
+
+### A. Capa Frontend (GitHub Pages)
+- El panel de control se compila a JavaScript estático (`output: 'export'`).
+- El código en GitHub Pages **no almacena ni incluye la contraseña del administrador**.
+- Cuando el usuario ingresa sus datos en `/login/`:
+  1. El navegador utiliza la Web Crypto API (`crypto.subtle.digest`) para calcular el hash SHA-256 de la contraseña en la memoria volátil del navegador.
+  2. El frontend despacha una petición `POST /api/auth/login` con el usuario y el hash al Cloud Relay.
+  3. Ni la contraseña en claro ni las credenciales maestras quedan en el árbol de Git ni en los archivos HTML/JS estáticos.
+
+### B. Capa de Servicios (Cloud Relay en Koyeb / Zeabur / Render)
+- El microservicio en Python lee las credenciales exclusivamente desde **variables de entorno del sistema operativo del contenedor**:
+  - `ADMIN_USER`
+  - `ADMIN_PASSWORD_HASH`
+  - `JWT_SECRET_KEY`
+  - `SERVER_INGEST_TOKEN`
+- Estas variables se definen directamente en la consola web del proveedor cloud (fuera del repositorio) y `.gitignore` bloquea cualquier archivo `.env` o token local.
+
+---
+
+## 2. Implementación Gratuita de GitGuardian
+
+GitGuardian ofrece un plan gratuito permanente (Free Tier) para desarrolladores individuales y proyectos personales (hasta 25 desarrolladores):
+
+### Opción A: GitGuardian GitHub App (Monitoreo en la Nube)
+1. Instalar la aplicación gratuita **GitGuardian** desde el GitHub Marketplace:
+   `https://github.com/marketplace/gitguardian`
+2. Seleccionar el repositorio `merolhack/xeon-nexus-sentinel`.
+3. Cada vez que se realiza un `git push` o un Pull Request, los servidores de GitGuardian escanean automáticamente todos los commits. Si se detecta un token o clave privada, el desarrollador recibe una notificación de incidente inmediata.
+
+### Opción B: CLI `ggshield` Local (Shift-Left DevSecOps)
+Permite bloquear la creación del commit en la propia máquina antes de que los datos salgan hacia internet:
+1. Instalar `ggshield` en el entorno WSL o Windows:
+   ```bash
+   pip install ggshield
+   ```
+2. Iniciar sesión con la cuenta gratuita:
+   ```bash
+   ggshield auth login
+   ```
+3. Activar el hook pre-commit:
+   ```bash
+   ggshield install -m repo
+   ```
+   A partir de ese momento, `ggshield secret scan pre-commit` se ejecutará en cada `git commit`.
+
+### Opción C: Escaneo Nativo Integrado en el Repositorio (`scripts/scan-secrets.sh`)
+Para operar de inmediato sin depender de cuentas externas:
+- El repositorio incluye [scripts/scan-secrets.sh](file:///wsl.localhost/ubuntu-20.04/home/merolhack/fl/xeon-nexus-sentinel/scripts/scan-secrets.sh) y [.githooks/pre-commit](file:///wsl.localhost/ubuntu-20.04/home/merolhack/fl/xeon-nexus-sentinel/.githooks/pre-commit).
+- Verifica mediante expresiones regulares que ningún cambio preparado contenga tokens de GitHub (`ghp_`), AWS (`AKIA...`), claves privadas SSH/RSA (`BEGIN PRIVATE KEY`) o tokens JWT.
+- Activar los hooks compartidos con:
+  ```bash
+  git config core.hooksPath .githooks
+  ```
 
 
 ================================================================================
@@ -759,84 +664,35 @@ La aparición recurrente del mensaje *"Sin señal"* en el monitor o televisor HD
 
 
 ================================================================================
-# FILE: wiki/concepts/randomx-cache-isolation.md
+# FILE: wiki/concepts/static-client-auth.md
 ================================================================================
 
 ---
 type: concept
-title: "Aislamiento de Recursos y Caché L3 en Minería RandomX"
-description: "Fórmula de dimensionamiento de hilos para RandomX basada en 2 MB de caché L3 y gobernanza contra la inferencia de IA"
-tags: [randomx, xmrig, cache-l3, numa, mineria, cpu, xeon]
+title: "Autenticación Criptográfica para Clientes Estáticos"
+description: "Esquema de autenticación sin backend dinámico en hosting estático mediante Web Crypto API y tokens JWT"
+tags: [seguridad, web-crypto-api, jwt, static-auth, sha256]
 created: 2026-11-22
 updated: 2026-11-22
 ---
 
-# Aislamiento de Recursos y Caché L3 en Minería RandomX
+# Autenticación Criptográfica para Clientes Estáticos
 
-## 1. La Regla de Oro de RandomX (2 MB L3 por Hilo)
+## 1. El Reto del Hosting Estático en GitHub Pages
 
-El algoritmo RandomX utilizado por Monero está diseñado para resistir ASICs mediante el uso intensivo de la memoria caché de nivel 3 (L3 Cache) y accesos de memoria aleatorios con alta sensibilidad a la latencia.
+GitHub Pages distribuye contenido exclusivamente estático (HTML, CSS y JS compilados). No existe un servidor Node.js o PHP intermedio para gestionar sesiones con cookies seguras `HttpOnly` originadas en el mismo dominio.
 
-Cada hilo de minería en RandomX requiere estrictamente **2 MB de memoria caché L3**.
+## 2. Flujo de Autenticación Criptográfica
 
-### Cálculo de Hilos Máximos
+Para permitir la visualización privada de métricas:
 
-Para dimensionar los hilos de XMRig sin saturar el procesador:
-
-`Hilos Máximos = Piso(Caché L3 Total en MB / 2)`
-
-Por ejemplo:
-- Intel Xeon E5520 (8 MB Caché L3): Hilos Máximos = 8 / 2 = 4 hilos.
-- Intel Xeon X5670 (12 MB Caché L3): Hilos Máximos = 12 / 2 = 6 hilos.
-
-Si se configuran más hilos de los permitidos por la caché física, los hilos excedentes deben acceder a la memoria RAM DDR3 para buscar los datos de Scratchpad, multiplicando la latencia por un factor de 10× y provocando una caída catastrófica del hashrate global.
-
-## 2. Competencia de Memoria: IA vs Minería
-
-Tanto la inferencia de modelos de lenguaje en CPU como la minería RandomX saturan por completo los canales de memoria del bus IMC. Ejecutar ambas tareas en paralelo degrada el rendimiento de la IA a menos de 1 token por segundo y reduce el hashrate en más del 70%.
-
-### Algoritmo del Gobernador (`ai-miner-governor.sh`)
-
-1. El script vigila la presencia de peticiones de inferencia activas en el puerto de Ollama / `llama.cpp`.
-2. Al detectar inferencia en curso:
-   - Envía comando HTTP `POST /1/pause` al minero XMRig.
-   - Libera el 100% del ancho de banda del bus de memoria y núcleos para el modelo de IA.
-3. Al concluir la generación del texto:
-   - Envía comando HTTP `POST /1/resume` al minero.
-   - Restablece la minería de fondo.
-
-
-================================================================================
-# FILE: wiki/concepts/cpu-inference-tuning.md
-================================================================================
-
----
-type: concept
-title: "Afinamiento de Inferencia de IA en CPU Xeon Legada"
-description: "Estrategias de cuantización y compilación para inferencia de LLM en procesadores Intel Xeon sin soporte AVX2"
-tags: [ia, llm, llama-cpp, cuantizacion, sse4-2, xeon, cpu]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Afinamiento de Inferencia de IA en CPU Xeon Legada
-
-## 1. Desafío Arquitectónico: Ausencia de AVX2
-
-Los procesadores Intel Xeon de la generación Nehalem y Westmere (LGA1366) carecen de los conjuntos de instrucciones vectoriales AVX y AVX2. Su límite vectorial se encuentra en **SSE4.2**. La mayoría de binarios precompilados modernos de PyTorch, TensorFlow o `llama.cpp` fallan con error de instrucción ilegal (`Illegal instruction (core dumped)`) si se ejecutan directamente.
-
-## 2. Soluciones y Reglas de Optimización
-
-1. **Compilación Nativa de `llama.cpp`:**
-   - La herramienta debe compilarse desde el código fuente desactivando AVX y activando SSE4.2:
-     `cmake -B build -DLLAMA_AVX=OFF -DLLAMA_AVX2=OFF -DLLAMA_FMA=OFF -DLLAMA_F16C=OFF`
-2. **Selección de Modelos Cuantizados:**
-   - Para CPUs con ancho de banda de memoria limitado (DDR3 ECC), los modelos óptimos son de 1B a 3B parámetros con cuantización agresiva `Q4_K_M` o `Q3_K_M`.
-   - Ejemplos recomendados: Llama-3.2-1B-Instruct, Qwen2.5-0.5B / 1.5B, SmolLM2-1.7B.
-3. **Mapeo en Memoria y Bloqueo de Paginación:**
-   - Se debe utilizar la bandera `--mlock` para impedir que el sistema operativo mueva los pesos del modelo al espacio de intercambio (swap) en disco.
-4. **Asignación de Hilos:**
-   - El número de hilos de cómputo (`-t`) debe coincidir exactamente con el número de núcleos físicos del socket asignado (excluyendo Hyper-Threading para evitar contención de caché L1/L2).
+1. **Ingreso en el Cliente:** El usuario introduce su nombre de usuario y contraseña en la página `/login/`.
+2. **Pre-hashing con Web Crypto API:** El navegador calcula un hash SHA-256 de la contraseña utilizando la API nativa `crypto.subtle.digest`. Nunca se transmite la contraseña en texto plano en la red.
+3. **Petición al Cloud Relay:** El frontend envía las credenciales hasheadas a la ruta `POST /api/auth/login` del microservicio FastAPI en la nube.
+4. **Validación Segura:** La API compara el usuario y el hash con las variables de entorno `ADMIN_USER` y `ADMIN_PASSWORD_HASH` mediante comparación en tiempo constante (`hmac.compare_digest`) para prevenir ataques de temporización.
+5. **Emisión de Token JWT:** Si la validación es correcta, la API emite un token JWT firmado con algoritmo HS256 y un tiempo de expiración (ej. 24 horas).
+6. **Almacenamiento en `sessionStorage`:** El frontend guarda el token únicamente en la memoria de la pestaña del navegador (`sessionStorage`), reduciendo el riesgo de persistencia indebida.
+7. **Guardia de Navegación (`AuthGuard`):** Las rutas protegidas validan la presencia y vigencia del token antes de renderizar los gráficos de telemetría.
 
 
 ================================================================================
@@ -921,209 +777,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\gdrive-backup.ps1 
 
 
 ================================================================================
-# FILE: wiki/concepts/headless-boot-diagnostics-and-telemetry.md
-================================================================================
-
----
-type: concept
-title: "Diagnóstico de Arranque Headless, Telemetría de Capa de Enlace y Automatización de iPXE"
-description: "Patrones de diagnóstico sin monitor para servidores legados con fallas de sincronismo de vídeo, telemetría por velocidad de enlace PHY (100M/1G) y arranque asistido por iPXE"
-tags: [headless, pxe, ipxe, telemetry, matrox-g200, diagnostics, sanboot, cr2032, bios]
-created: 2026-11-26
-updated: 2026-11-26
----
-
-# Diagnóstico de Arranque Headless, Telemetría de Capa de Enlace y Automatización de iPXE
-
-Este documento compendia las técnicas avanzadas de telemetría de red, monitoreo de estados de hardware sin monitor y automatización de arranque diseñadas para operar con el nodo servidor **HP ProLiant ML150 G6** cuando la salida de vídeo analógica (Matrox G200e + conversor activo VGA-HDMI) es inestable o efímera.
-
----
-
-## 1. El Desafío Físico: Cegueras Visuales en Hardware Legado
-
-En servidores empresariales torre de generación G6/G7 (2009-2011), el monitoreo visual tradicional mediante monitores HDMI comerciales falla por tres razones físicas:
-1. **Pérdida de Sincronismo del DAC Analógico:** El chip gráfico integrado **Matrox G200e** altera repetidamente sus frecuencias de refresco horizontal y vertical al conmutar entre el logotipo gráfico inicial (640×480 @ 60Hz), el modo texto del BIOS AMI (720×400 @ 70Hz), las Option ROMs de controladoras PCIe y el framebuffer del kernel Linux (`mgag200drmfb`).
-2. **Desconexión del Conversor Activo VGA-HDMI:** Los conversores analógico-digitales comerciales pierden el enganche de fase (Phase-Locked Loop / PLL) ante transiciones de vídeo de menos de 500 ms, provocando que los televisores modernos (como LG) entren en modo de ahorro de energía (*"No signal / Power Saving Mode"*).
-3. **Brevedad de Mensajes Críticos en Pantalla:** Avisos como `Press <ESC> to boot....1` duran exactamente un segundo antes de que la BIOS tome la decisión de arranque por defecto, haciendo humanamente imposible la verificación o captura visual interactiva.
-
----
-
-## 2. Telemetría de Capa de Enlace (L2/PHY) como Monitor de Estado
-
-Ante la ausencia de vídeo, el estado del hardware del servidor se infiere con precisión milimétrica analizando la velocidad de enlace (*LinkSpeed*) y el tráfico de tramas en la tarjeta de red Gigabit integrada (HP NC107i / Broadcom BCM5723):
-
-```text
-[Servidor Apagado / Standby]  ---> Link: Desconectado o 10 Mbps (solo BMC/iLO si está energizado)
-[POST de BIOS / Setup F10]    ---> Link: 100 Mbps (Broadcom PHY en modo ahorro/compatibilidad BIOS)
-[Option ROM Broadcom MBA]     ---> Link: 100 Mbps o 1 Gbps (Peticiones DHCP DISCOVER en puerto UDP 67)
-[Kernel Linux / Driver tg3]   ---> Link: 1 Gbps (Negociación Full Duplex Gigabit 1000 Mbps)
-```
-
-### Regla Diagnóstica de Transición de Velocidad:
-* **Si el enlace salta de 100 Mbps a 1 Gbps:** Significa inequívocamente que el hardware del servidor superó el POST y el kernel de Linux (o el firmware avanzado de red) tomó el control del bus PCI Express e inicializó el controlador `tg3`. La falta de imagen es 100% atribuible al conversor de vídeo.
-* **Si el enlace permanece en 100 Mbps indefinidamente:** El servidor continúa en la fase de BIOS o se encuentra en pausa por advertencia interactiva (`Press <F1> to continue` o `Press <ESC> to boot`).
-
----
-
-## 3. Resiliencia Ante la Pérdida de NVRAM/CMOS (Batería CR2032)
-
-Cuando la batería de litio CR2032 de la placa base se encuentra agotada (0.0 V):
-1. **Microcaída de Tensión en Reinicio:** Durante un reinicio por software (*warm reset*), la línea de voltaje principal cae temporalmente para resetear el Southbridge (ICH10R). Sin la batería de 3V para sostener los registros CMOS, se genera un error de suma de verificación (*CMOS Checksum Bad*) y la placa carga los valores por defecto de fábrica de 2011.
-2. **Estrategia de Mitigación por Red (Fallback de Fábrica):**
-   * En los valores de fábrica, la BIOS del ML150 G6 busca unidades ópticas y luego ejecuta de forma obligatoria el arranque por red **PXE (`Network:MBA`)**.
-   * Esto permite utilizar la laptop como un **orquestador maestro de rescate** que no depende de la memoria de la placa base.
-
----
-
-## 4. Arquitectura de Arranque Automatizado con iPXE (`sanboot 0x80`)
-
-Para garantizar que el servidor siempre cargue AlmaLinux 9 instalado en los discos duros SAS de la controladora Smart Array P410 sin importar la pérdida de configuración del BIOS, el script `boot.ipxe` en la laptop implementa un despachador inteligente:
-
-```ipxe
-#!ipxe
-set menu-timeout 3000
-set submenu-timeout ${menu-timeout}
-
-:start
-menu Xeon Nexus Sentinel - Menu de Inicio Automatizado
-item --default --key s local_sas  [S] Arrancar AlmaLinux 9 desde Disco SAS Local (0x80)
-item --key r rescue_boot          [R] Arrancar Modo Rescate de Linux por Red
-item --key i reinstall            [I] Reinstalar AlmaLinux 9 (Kickstart Automatico)
-choose --timeout ${menu-timeout} --default local_sas target && goto ${target}
-
-:local_sas
-echo Arrancando AlmaLinux 9 desde disco SAS local (0x80)...
-sanboot --no-describe --drive 0x80 || goto fallback_exit
-
-:fallback_exit
-echo [AVISO] sanboot fallo o no respondio. Saliendo de iPXE...
-exit 1
-```
-
-### Mecánica de Ejecución:
-1. El servidor arranca por PXE y descarga `undionly.kpxe` vía TFTP.
-2. iPXE ejecuta `boot.ipxe` por HTTP local (puerto 8000).
-3. Tras una cuenta regresiva de 3 segundos, `sanboot --no-describe --drive 0x80` invoca directamente la interrupción BIOS INT 13h sobre el dispositivo `0x80` (el arreglo RAID 1 de 419 GB de la Smart Array P410).
-4. El MBR de AlmaLinux 9 toma el control y carga el sistema operativo de forma desatendida.
-
----
-
-## 5. Matriz de Scripts de Diagnóstico Robusto (Suite Headless)
-
-Para diagnosticar sin depender de la salida de vídeo, se establecen cuatro monitores automáticos en la estación de control:
-
-| Script | Propósito | Detección Clave |
-| :--- | :--- | :--- |
-| `monitor-link-speed.ps1` | Monitorea la velocidad de enlace físico (100M vs 1G). | Distingue entre estado BIOS (100M) y estado Linux Kernel (1G). |
-| `sniff-dhcp-traffic.py` | Escucha pasiva de tramas DHCP DISCOVER/REQUEST en puerto 67 UDP. | Identifica si el servidor está en fase de arranque PXE ROM o de cliente OS. |
-| `scan-active-ssh.py` | Barrido asíncrono con timeout corto (0.3 s) sobre subred `192.168.137.0/24`. | Detecta la apertura inmediata del puerto 22 SSH al terminar el boot. |
-| `recover-vga-hdmi.bat` | Reseteo por software de alimentación de concentradores USB vinculados al conversor. | Fuerza el reenganche de fase analógica en pantallas externas. |
-
-
-================================================================================
-# FILE: wiki/concepts/secrets-management-and-gitguardian.md
-================================================================================
-
----
-type: concept
-title: "Gestión Segura de Credenciales y Validación con GitGuardian"
-description: "Estrategias de protección de secretos, aislamiento de contraseñas en hosting estático y uso del nivel gratuito de GitGuardian"
-tags: [seguridad, secretos, gitguardian, ggshield, devsecops, jwt]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Gestión Segura de Credenciales y Validación con GitGuardian
-
-## 1. ¿Por Qué las Credenciales NO Quedan Expuestas en GitHub?
-
-### A. Capa Frontend (GitHub Pages)
-- El panel de control se compila a JavaScript estático (`output: 'export'`).
-- El código en GitHub Pages **no almacena ni incluye la contraseña del administrador**.
-- Cuando el usuario ingresa sus datos en `/login/`:
-  1. El navegador utiliza la Web Crypto API (`crypto.subtle.digest`) para calcular el hash SHA-256 de la contraseña en la memoria volátil del navegador.
-  2. El frontend despacha una petición `POST /api/auth/login` con el usuario y el hash al Cloud Relay.
-  3. Ni la contraseña en claro ni las credenciales maestras quedan en el árbol de Git ni en los archivos HTML/JS estáticos.
-
-### B. Capa de Servicios (Cloud Relay en Koyeb / Zeabur / Render)
-- El microservicio en Python lee las credenciales exclusivamente desde **variables de entorno del sistema operativo del contenedor**:
-  - `ADMIN_USER`
-  - `ADMIN_PASSWORD_HASH`
-  - `JWT_SECRET_KEY`
-  - `SERVER_INGEST_TOKEN`
-- Estas variables se definen directamente en la consola web del proveedor cloud (fuera del repositorio) y `.gitignore` bloquea cualquier archivo `.env` o token local.
-
----
-
-## 2. Implementación Gratuita de GitGuardian
-
-GitGuardian ofrece un plan gratuito permanente (Free Tier) para desarrolladores individuales y proyectos personales (hasta 25 desarrolladores):
-
-### Opción A: GitGuardian GitHub App (Monitoreo en la Nube)
-1. Instalar la aplicación gratuita **GitGuardian** desde el GitHub Marketplace:
-   `https://github.com/marketplace/gitguardian`
-2. Seleccionar el repositorio `merolhack/xeon-nexus-sentinel`.
-3. Cada vez que se realiza un `git push` o un Pull Request, los servidores de GitGuardian escanean automáticamente todos los commits. Si se detecta un token o clave privada, el desarrollador recibe una notificación de incidente inmediata.
-
-### Opción B: CLI `ggshield` Local (Shift-Left DevSecOps)
-Permite bloquear la creación del commit en la propia máquina antes de que los datos salgan hacia internet:
-1. Instalar `ggshield` en el entorno WSL o Windows:
-   ```bash
-   pip install ggshield
-   ```
-2. Iniciar sesión con la cuenta gratuita:
-   ```bash
-   ggshield auth login
-   ```
-3. Activar el hook pre-commit:
-   ```bash
-   ggshield install -m repo
-   ```
-   A partir de ese momento, `ggshield secret scan pre-commit` se ejecutará en cada `git commit`.
-
-### Opción C: Escaneo Nativo Integrado en el Repositorio (`scripts/scan-secrets.sh`)
-Para operar de inmediato sin depender de cuentas externas:
-- El repositorio incluye [scripts/scan-secrets.sh](file:///wsl.localhost/ubuntu-20.04/home/merolhack/fl/xeon-nexus-sentinel/scripts/scan-secrets.sh) y [.githooks/pre-commit](file:///wsl.localhost/ubuntu-20.04/home/merolhack/fl/xeon-nexus-sentinel/.githooks/pre-commit).
-- Verifica mediante expresiones regulares que ningún cambio preparado contenga tokens de GitHub (`ghp_`), AWS (`AKIA...`), claves privadas SSH/RSA (`BEGIN PRIVATE KEY`) o tokens JWT.
-- Activar los hooks compartidos con:
-  ```bash
-  git config core.hooksPath .githooks
-  ```
-
-
-================================================================================
-# FILE: wiki/concepts/static-client-auth.md
-================================================================================
-
----
-type: concept
-title: "Autenticación Criptográfica para Clientes Estáticos"
-description: "Esquema de autenticación sin backend dinámico en hosting estático mediante Web Crypto API y tokens JWT"
-tags: [seguridad, web-crypto-api, jwt, static-auth, sha256]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Autenticación Criptográfica para Clientes Estáticos
-
-## 1. El Reto del Hosting Estático en GitHub Pages
-
-GitHub Pages distribuye contenido exclusivamente estático (HTML, CSS y JS compilados). No existe un servidor Node.js o PHP intermedio para gestionar sesiones con cookies seguras `HttpOnly` originadas en el mismo dominio.
-
-## 2. Flujo de Autenticación Criptográfica
-
-Para permitir la visualización privada de métricas:
-
-1. **Ingreso en el Cliente:** El usuario introduce su nombre de usuario y contraseña en la página `/login/`.
-2. **Pre-hashing con Web Crypto API:** El navegador calcula un hash SHA-256 de la contraseña utilizando la API nativa `crypto.subtle.digest`. Nunca se transmite la contraseña en texto plano en la red.
-3. **Petición al Cloud Relay:** El frontend envía las credenciales hasheadas a la ruta `POST /api/auth/login` del microservicio FastAPI en la nube.
-4. **Validación Segura:** La API compara el usuario y el hash con las variables de entorno `ADMIN_USER` y `ADMIN_PASSWORD_HASH` mediante comparación en tiempo constante (`hmac.compare_digest`) para prevenir ataques de temporización.
-5. **Emisión de Token JWT:** Si la validación es correcta, la API emite un token JWT firmado con algoritmo HS256 y un tiempo de expiración (ej. 24 horas).
-6. **Almacenamiento en `sessionStorage`:** El frontend guarda el token únicamente en la memoria de la pestaña del navegador (`sessionStorage`), reduciendo el riesgo de persistencia indebida.
-7. **Guardia de Navegación (`AuthGuard`):** Las rutas protegidas validan la presencia y vigencia del token antes de renderizar los gráficos de telemetría.
-
-
-================================================================================
 # FILE: wiki/concepts/strata-vs-ollama-inference.md
 ================================================================================
 
@@ -1189,6 +842,111 @@ El análisis de compatibilidad frente a las especificaciones del nodo servidor r
   1. Instalar los 3 módulos RAM restantes y ampliar el servidor a 48 GB DDR3 ECC (máximo por CPU).
   2. Incorporar una tarjeta gráfica PCIe de consumo (ej. NVIDIA RTX 3060 12GB o superior) con alimentación adaptada.
   3. Desplegar Strata mediante su contenedor Docker oficial para servir APIs OpenAI/Anthropic hacia la red interna.
+
+
+================================================================================
+# FILE: wiki/entities/hp-server-node.md
+================================================================================
+
+---
+type: entity
+title: "Nodo Físico: Servidor HP ProLiant ML150 G6"
+description: "Servidor empresarial torre de doble zócalo Xeon operando en modo headless con AlmaLinux 9 Minimal"
+tags: [servidor, hp-proliant, almalinux, headless, ilo, xeon, smart-array, ipxe]
+created: 2026-11-22
+updated: 2026-11-23
+---
+
+# Nodo Físico: Servidor HP ProLiant ML150 G6 (`hp-server-node`)
+
+## 1. Identificación y Rol
+
+* **Hostname Local:** `xeon-sentinel.local` o IP estática en red interna.
+* **Sistema Operativo Destino:** AlmaLinux 9.x Minimal (x86_64, sin interfaz gráfica). Instalación desatendida completada en arreglo RAID Smart Array P410 (`/dev/sda`).
+* **Sistema Operativo Preexistente (Erradicado):** Windows Server 2008 R2 Enterprise (sobrescrito y particionado por Kickstart).
+* **Modo Operativo:** Headless continuo (sin teclado ni monitor conectados en producción).
+* **Propósito:** Nodo de cómputo en segundo plano para minería RandomX de baja prioridad, ejecución cuantizada de modelos ligeros con `llama.cpp` y recolección de métricas.
+
+## 2. Puntos de Entrada y Control
+
+* **HP iLO 100i (BMC):** Puerto Ethernet dedicado o compartido. Permite control de energía (power-on/reboot forzado) e inspección de salud térmica.
+* **OpenSSH (Puerto 22):** Acceso administrativo seguro preconfigurado con usuario `root`, contraseña `nexusadmin2026!` y directiva `PermitRootLogin yes`.
+* **Cockpit (Puerto 9090):** Panel web nativo para gestión de discos, red, paquetes y terminal web directa.
+* **Daemon Local (xeon-sentinel):** Servicio systemd que recopila telemetría y controla el gobernador de alternancia.
+
+## 3. Especificaciones de Hardware Verificadas en Laboratorio
+
+* **Procesadores:** Dual Intel Xeon LGA1366 (Nehalem, 4 núcleos por zócalo, SSE4.2, triple canal de memoria DDR3 ECC).
+* **Memoria RAM Verificada y Población de Slots:**
+  * **Configuración Actual Operativa:** 8192 MB (8 GB) limpios en DDR3-1333 Registered ECC.
+  * **Módulos Instalados:** 2 × Micron 4 GB `PC3-10600R` (`MT36JBZS51272PY-1G4D1`) en zócalos primarios blancos `DIMM 2A` y `DIMM 4B` de CPU1.
+  * **Gobernanza de Memoria y Coexistencia:** Prohibición absoluta de mezcla entre módulos RDIMM y UDIMM (`PC3-10600E`). Los módulos preexistentes heredados (2x Nanya 4GB + 1x Samsung 2GB UDIMM) fueron desacoplados para garantizar la estabilidad eléctrica. (Véase detalle en [server-memory-and-bios-governance.md](../concepts/server-memory-and-bios-governance.md)).
+* **Controlador de Almacenamiento:** HP Smart Array P410 con caché SAS/SATA y arreglo RAID activo.
+* **Unidades de Disco Físicas (Identificadas en Bahías Hot-Plug):**
+  * **Bahía 1:** 450 GB SAS 6G Dual-Port 15,000 RPM (HP Spare: `517352-001`).
+  * **Bahía 2:** 450 GB SAS 6G Dual-Port 15,000 RPM (HP Spare: `517352-001`).
+  * **Bahía 3:** Vacía.
+  * **Bahía 4:** Bandeja ciega de relleno (Drive Blank Filler).
+* **Puertos y Panel Frontal:**
+  * 2 puertos frontales USB 2.0 (compatibles con teclado/mouse USB).
+  * LEDs de estado: LED de encendido (Verde continuo), LED de salud del chasis (Verde continuo, confirmando salud operativa 100%), LED de actividad de red.
+  * Botón de encendido frontal (Power/Standby con apagado forzado de 5 segundos).
+* **Puertos de Red (NIC):** Dos puertos Gigabit integrados HP NC107i (Broadcom BCM5723):
+  * **Puerto 1 / Mgmt (inferior):** Puerto Ethernet primario para PXE Netboot, enlace Gigabit con la laptop (192.168.137.1) y gestión.
+  * **Puerto 2 (superior):** Puerto Ethernet secundario.
+* **Video y Pantalla:** Chip gráfico Matrox G200 integrado con salida VGA trasera estándar.
+* **Unidad Óptica:** Lector interno frontal DVD/CD SATA/IDE con bandeja motorizada (`hp DVDROM DH40N`).
+
+## 4. Hallazgos y Resultados de las Pruebas Físicas (Noviembre 2026)
+
+* **Diagnóstico de Video VGA a HDMI y Pérdida de Sincronismo:**
+  * Se conectó un adaptador activo VGA a HDMI hacia una pantalla/TV HDMI LG.
+  * El conversor activo requiere alimentación auxiliar de 5V micro-USB para energizar el circuito analógico-digital. Al energizarlo, la pantalla proyecta nítidamente el logo gráfico inicial de HP ProLiant.
+  * Durante la transición del logo gráfico (640×480) hacia el modo texto (720×400 / Option ROMs), el puerto VGA reinicia momentáneamente la señal de sincronismo, causando que algunos convertidores pierdan el bloqueo de reloj y la TV muestre *"No hay señal"*.
+* **Diagnóstico Acústico de Beeps de POST:**
+  * **2 beeps cortos:** Ocurrieron al encender el servidor con las charolas de discos SAS extraídas hacia afuera. La controladora Smart Array P410 detectó la ausencia del arreglo (`1785-Slot X Drive Array - Drive(s) Not Detected`) y detuvo el POST esperando confirmación interactiva (`Press <F1> to continue, <F2> to configure`).
+  * **1 beep corto:** Al volver a insertar los discos SAS en sus bahías y encender el servidor, sonó un único beep corto, el cual corresponde al código estándar de éxito de POST y transferencia de control hacia el dispositivo de arranque.
+* **Intervención y Validación de Teclado y Setup de BIOS:**
+  * Se confirmó la disponibilidad de teclado USB para la interacción directa con el firmware.
+  * Tecla de acceso confirmada al BIOS Setup: **`F10`** (o `Supr` / Delete).
+  * Firmware detectado: **AMI BIOS v02.61, ROMID 021, Fecha de Revisión 01/18/2011**.
+  * Detección de Procesador: Intel(R) Xeon(R) CPU E5504 @ 2.00GHz (1 CPU físico, 4 de 4 cores lógicos habilitados).
+  * Detección de Memoria: **`System Memory Size: 8192MB` (8 GB)** limpios y estables tras aislar los dos módulos nuevos VLP Micron/IBM 4 GB DDR3 ECC Registered en las ranuras primarias blancas `DIMM2A` y `DIMM4B`.
+  * Dirección MAC integrada: **`44-1E-A1-6E-D2-E4`** (HP NC107i Gigabit / Broadcom MBA v11.0.8).
+* **Despliegue y Conclusión Exitosa de AlmaLinux 9 vía Vía B (inst.stage2 Oficial):**
+  * La instalación desatendida se ejecutó mediante arquitectura de red en dos fases con `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os` y `inst.ks=http://192.168.137.1:8000/ks.cfg`.
+  * Parámetros de pantalla optimizados: `nomodeset inst.text console=tty0 console=ttyS0,115200n8`, erradicando el parámetro obsoleto `vga=normal` que provocaba excepciones de CPU.
+  * Se transfirieron más de 1.4 GB de paquetes RPM base a velocidades de entre 23 y 31 MB/s a través del enlace Gigabit de la laptop (`192.168.137.1`).
+  * Anaconda completó el particionado de los discos SAS 15K RPM (`/dev/sda`), instaló el cargador GRUB en el MBR, ejecutó la configuración `%post` de SSH y sincronizador `chronyd`, y ejecutó el reinicio autónomo hacia el disco SAS local.
+
+
+================================================================================
+# FILE: wiki/entities/windows-laptop-node.md
+================================================================================
+
+---
+type: entity
+title: "Nodo Workstation: Laptop Windows 11"
+description: "Estación de trabajo principal para desarrollo agéntico con Antigravity IDE, Ollama y consola de control"
+tags: [workstation, windows11, antigravity-ide, ollama, wsl2]
+created: 2026-11-22
+updated: 2026-11-22
+---
+
+# Nodo Workstation: Laptop Windows 11 (`windows-laptop-node`)
+
+## 1. Identificación y Rol
+
+* **Sistema Operativo:** Windows 11 Pro con subsistema WSL 2 (Ubuntu 20.04 LTS).
+* **Entorno de Desarrollo:** Antigravity IDE (agente AI integrado con servidores MCP y LLM Wiki).
+* **Motor de Inferencia Local:** Ollama Desktop para modelos locales de asistencia (`qwen3:8b-8k`, `gemma4`).
+* **Propósito:** Estación de trabajo para el programador. Proporciona los periféricos físicos (pantalla, teclado y ratón) para administrar el servidor HP ProLiant a través de la red local.
+
+## 2. Conectividad con el Servidor
+
+* Conexión vía WiFi hacia el punto de acceso / repetidor compartido con el servidor.
+* Sesiones de terminal OpenSSH y visualización del panel web de Cockpit en navegador.
+* Gestión de repositorios en GitHub mediante `gh` CLI y flujos CI/CD.
 
 
 ================================================================================
@@ -1526,6 +1284,267 @@ Genera la estructura de directorios, los archivos de memoria OKF y todo el códi
 
 
 ================================================================================
+# FILE: wiki/systems/almalinux-daemon.md
+================================================================================
+
+---
+type: system
+title: "Daemon de Telemetría en AlmaLinux 9"
+description: "Servicio en segundo plano para recolección de métricas de CPU, RAM, temperatura, IA y minería en AlmaLinux 9"
+tags: [almalinux, daemon, python, telemetria, systemd]
+created: 2026-11-22
+updated: 2026-11-22
+---
+
+# Daemon de Telemetría en AlmaLinux 9 (`xeon-sentinel`)
+
+## 1. Responsabilidad y Funcionamiento
+
+El daemon de telemetría reside en el servidor HP ProLiant ML150 G6 operando sobre **AlmaLinux 9 Minimal**. Su propósito es inspeccionar el estado del hardware, los procesos de inferencia local (`llama.cpp` o Ollama) y el minero XMRig (RandomX), empaquetando periódicamente un objeto JSON que se despacha vía HTTP POST al Cloud Relay.
+
+## 2. Métricas Recolectadas
+
+1. **CPU y Frecuencia:** Lectura diferencial de `/proc/stat` y `/proc/cpuinfo` calculando el porcentaje de uso por núcleo e integral.
+2. **Memoria y NUMA:** Lectura de `/proc/meminfo` (MemTotal, MemFree, Buffers, Cached) y desglose de páginas locales vs remotas vía `numastat`.
+3. **Sensores Térmicos:** Extracción mediante `sysfs` (`/sys/class/thermal/` o `coretemp`) o comando IPMI BMC.
+4. **Estado de IA Local:** Sonda HTTP hacia el endpoint `/api/tags` o `/api/ps` de Ollama / `llama.cpp` server para medir modelos cargados y tiempos de generación.
+5. **Estado de Criptominería:** Consulta al endpoint HTTP local de XMRig (`http://127.0.0.1:18088/1/summary`) extrayendo hashrate a 10s, 60s, 15m y temperatura de encapsulado.
+
+## 3. Configuración y Ejecución
+
+- **Archivo de Configuración:** `server/daemon/config.yaml`
+- **Servicio Systemd:** `server/systemd/xeon-sentinel.service`
+- **Cadencia de Publicación:** Cada 5 segundos en condiciones normales, con reintentos exponenciales ante fallos de red.
+
+
+================================================================================
+# FILE: wiki/systems/cloud-relay-api.md
+================================================================================
+
+---
+type: system
+title: "Cloud Relay API en Python (FastAPI)"
+description: "Microservicio REST intermediario para ingesta y distribución de telemetría en nubes SaaS gratuitas"
+tags: [fastapi, python, cloud-relay, koyeb, zeabur, render, jwt]
+created: 2026-11-22
+updated: 2026-11-22
+---
+
+# Cloud Relay API en Python (`cloud-relay`)
+
+## 1. Propósito de la Capa de Intermediación
+
+Debido a que el servidor HP ProLiant se encuentra tras una conexión de banda ancha residencial (NAT de doble capa o Carrier-Grade NAT sin IP pública fija) y el frontend se ejecuta como archivos estáticos en GitHub Pages, el **Cloud Relay** actúa como puente público seguro de baja latencia.
+
+## 2. Endpoints Expuestos
+
+| Método | Ruta | Autenticación | Función |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/telemetry` | Encabezado `X-Server-Token` | Recibe payload JSON del daemon en AlmaLinux y lo almacena en RAM circular |
+| `GET` | `/api/telemetry/latest` | `Bearer <JWT_TOKEN>` | Devuelve la instantánea más reciente de métricas al frontend |
+| `GET` | `/api/telemetry/history` | `Bearer <JWT_TOKEN>` | Devuelve una serie temporal con las últimas 100 muestras |
+| `POST` | `/api/auth/login` | Público (Body JSON) | Valida usuario y contraseña cifrada emitiendo un JWT firmado |
+| `GET` | `/api/health` | Público | Comprobación de estado para keep-alive y monitorización de uptime |
+
+## 3. Aislamiento y Memoria Volátil
+
+- El servicio mantiene un buffer circular `deque(maxlen=100)` en memoria volátil de Python.
+- No utiliza bases de datos externas como PostgreSQL o Redis, garantizando un consumo de RAM inferior a 70 MB y adaptándose al nivel gratuito de Koyeb, Zeabur o Render.
+
+
+================================================================================
+# FILE: wiki/systems/headless-pxe-netboot.md
+================================================================================
+
+---
+title: "Arquitectura de Despliegue Headless PXE Netboot para HP ProLiant ML150 G6"
+description: "Servidor PXE/TFTP/HTTP autonomo en Python para instalacion desatendida de AlmaLinux 9 en servidores sin monitor ni teclado."
+category: "systems"
+date: "2026-11-23"
+status: "active"
+tags: ["pxe", "netboot", "tftp", "http", "ipxe", "kickstart", "almalinux9", "headless"]
+---
+
+# Arquitectura de Despliegue Headless PXE Netboot
+
+## 1. Contexto y Desafio Tecnico
+El servidor **HP ProLiant ML150 G6** es un nodo de computo empresarial:
+- Controlador de almacenamiento interno: HP Smart Array P410 / SAS-SATA con discos configurados.
+- Sistema operativo preexistente en disco: **Windows Server 2008 R2 Enterprise**.
+- Prioridad de arranque del BIOS: Da preferencia al disco duro interno sobre el arranque por red PXE.
+- Sin monitor ni teclado USB externo conectado directamente al servidor (pantalla verificada por HDMI en TV mediante conversor VGA a HDMI con alimentacion USB).
+- Medios disponibles en laptop: Grabadora externa USB **PHILIPS CDRW/DVD SCB5265 (Unidad E:)** y discos virgenes **CD-R (700 MB)**.
+
+## 2. Estrategia de Arranque Hibrido: CD-R iPXE + Red Gigabit (PXE/HTTP)
+Dado que la imagen oficial `AlmaLinux-9-boot.iso` pesa 1.55 GB y excede la capacidad fisica de un CD-R (700 MB maximo, requiere DVD):
+1. Se emplea **iPXE ISO (`ipxe.iso`, ~9 MB)** grabada en el CD-R.
+2. El BIOS del HP ProLiant ML150 G6 prioriza de fabrica la unidad lectora frontal DVD/CD sobre los discos duros internos.
+3. El CD-R arranca iPXE en menos de 2 segundos sin requerir intervencion de teclado.
+4. iPXE se comunica por el puerto inferior Gigabit (`1/Mgmt`) con el servidor autonomo en la laptop (`192.168.137.1:8000`).
+5. Descarga `vmlinuz` (14.62 MB) e `initrd.img` (218.16 MB) por HTTP a 1 Gbps e inicia la instalacion desatendida via Kickstart (`ks.cfg`).
+
+```text
+[ Laptop Windows 11 ] (Gateway: 192.168.137.1)
+  │  ├── Conexión Compartida (ICS): Enruta tráfico de Wi-Fi hacia Ethernet
+  │  ├── Servidor HTTP (Puerto 8000): Sirve boot.ipxe, ks.cfg, vmlinuz e initrd.img
+  │  ├── Servidor TFTP (Puerto 69): Sirve undionly.kpxe (iPXE)
+  │  └── Servidor DHCP/ProxyDHCP (Puerto 67): Responde con opciones PXE dinámicas
+  │
+  ▼ (Cable Ethernet Gigabit - 1 Gbps)
+[ HP ProLiant ML150 G6 ] (Puerto Inferior 1/Mgmt - NC107i Gigabit)
+  1. BIOS PXE ROM solicita IP -> Recibe 192.168.137.50 y next-server=undionly.kpxe
+  2. TFTP descarga undionly.kpxe en ~150 ms
+  3. iPXE arranca -> Solicita DHCP con Opción 175
+  4. DHCP detecta iPXE -> Entrega URL http://192.168.137.1:8000/boot.ipxe
+  5. iPXE descarga vmlinuz (~15 MB) e initrd.img (~228 MB) por HTTP a 1 Gbps (~2-3 seg)
+  6. Anaconda inicia en modo texto desatendido leyendo ks.cfg
+  7. Instalación automatizada completa de AlmaLinux 9 y reinicio con OpenSSH activo
+```
+
+## 3. Resolucion del Bucle Infinito de iPXE
+Para evitar que el cliente iPXE descargue cíclicamente su propio binario en entornos headless, el servidor DHCP implementa discriminación por cabeceras RFC 2132 / RFC 3925:
+- **Cliente BIOS Estándar (Sin Opción 175):** Se le entrega `undionly.kpxe` vía TFTP.
+- **Cliente iPXE (Con Opción 175 o User-Class 'iPXE'):** Se le entrega la directiva HTTP directa `http://192.168.137.1:8000/boot.ipxe`.
+
+## 4. Parametros Kickstart (ks.cfg) para Operacion Headless
+- Modo texto estricto (`text`, `skipx`).
+- Aceptación automática de licencia (`eula --agreed`).
+- Particionamiento automático MBR/BIOS (`bootloader --location=mbr`, `clearpart --all --initlabel`, `autopart --type=plain`).
+- Red por DHCP en enlace activo (`network --bootproto=dhcp --device=link --activate --onboot=yes`).
+- Contraseña de root preconfigurada (`rootpw --plaintext nexusadmin2026!`).
+- SSH habilitado automáticamente (`services --enabled="sshd"`).
+- Reinicio automático al terminar (`reboot`).
+
+## 5. Pruebas de Diagnóstico y Resultados de Campo con el Servidor (Noviembre 2026)
+
+Durante las sesiones de laboratorio y pruebas en vivo con el HP ProLiant ML150 G6 se ejecutaron y validaron los siguientes componentes:
+
+### 5.1 Diagnóstico de Video y Descubrimiento del Estado del Servidor
+- **Prueba:** Conexión del puerto VGA trasero hacia TV mediante adaptador activo VGA a HDMI.
+- **Resultado:** El convertidor activo requería alimentación externa de 5V micro-USB para energizar el circuito analógico-digital. Al energizarlo por USB, la señal de video apareció de forma inmediata.
+- **Hallazgo:** La pantalla reveló que el servidor tiene preinstalado **Windows Server 2008 R2 Enterprise** en un arreglo SAS RAID administrado por la controladora **HP Smart Array P410**.
+
+### 5.2 Pruebas de Red y Sondeo DHCP/ICS
+- **Entorno:** Conexión compartida a Internet (ICS) en Windows 11 sobre el segmento `192.168.137.0/24` (laptop como Gateway en `192.168.137.1`).
+- **Scripts de Diagnóstico con Timeouts Estrictos (Mandato 6):**
+  - `scripts/scan-ics-range.ps1`: Escaneo paralelo de direcciones IP en la subred ICS.
+  - `scripts/detect-ilo.ps1`: Sondeo de puertos HTTP (80) y HTTPS (443) para identificar la interfaz HP iLO 100i con timeout de 2 segundos por nodo.
+  - `scripts/monitor-hp-ip.ps1`: Monitoreo continuo de solicitudes ARP y asignaciones de IP para el servidor.
+  - `scripts/check-dhcp-leases.ps1`: Inspección de concesiones de red emitidas por ICS.
+  - `scripts/sniff-broadcasts.ps1` y `scripts/sniff-ports.ps1`: Captura no bloqueante de tramas DHCP UDP 67/68 y TFTP UDP 69.
+- **Conclusión de Red:** El servidor físico no realizaba broadcast DHCP PXE durante el encendido debido a que la secuencia de arranque del BIOS priorizaba el disco duro interno Smart Array P410.
+
+### 5.3 Implementación y Verificación del Servidor PXE Autónomo
+- **Componente:** `scripts/headless_pxe_server.py` implementado en Python estándar sin dependencias externas pesadas.
+- **Servicios Integrados:**
+  - Servidor DHCP/ProxyDHCP en puerto UDP 67.
+  - Servidor TFTP en puerto UDP 69 sirviendo `undionly.kpxe`.
+  - Servidor HTTP en puerto TCP 8000 sirviendo `boot.ipxe`, `ks.cfg`, `vmlinuz` (14.62 MB) e `initrd.img` (218.16 MB).
+- **Control de Bucle:** Discriminación de Opción 175 verificada para entrega directa del script de arranque HTTP al detectar clientes iPXE.
+- **Lanzador Rápido:** Creación de `iniciar-servidor-pxe.bat` para ejecución en Windows 11 con elevación de privilegios de red.
+
+### 5.4 Grabación Desatendida de iPXE en CD-R
+- **Desafío:** Imposibilidad de grabar el ISO completo de AlmaLinux 9 (1.55 GB) en un CD-R virgen (700 MB) y ausencia de teclado físico USB conectado al servidor para cambiar el orden de arranque en el BIOS.
+- **Solución:** Grabación de la imagen ultraligera `ipxe.iso` (9 MB) en CD-R.
+- **Herramienta:** Creación de `scripts/burn-iso.ps1`, automatizando `C:\Windows\System32\isoburn.exe /Q E: C:\Users\lenin\pxeboot\ipxe.iso` sobre la unidad óptica externa PHILIPS CDRW/DVD SCB5265 (Unidad E:).
+- **Resultado:** Grabación de pistas finalizada exitosamente con código de salida 0, lista para ser leída por la lectora frontal del servidor y conectar por Gigabit al servidor PXE de la laptop.
+
+### 5.5 Diagnóstico de Beeps del BIOS, Arreglo SAS y Validación de Hardware
+- **Comportamiento con Discos Extraídos (2 Beeps Cortos):**
+  - Al extraer las dos charolas de discos SAS frontales hacia afuera para evitar el inicio de Windows Server, la controladora Smart Array P410 emitió 2 beeps cortos y pausó el POST en la advertencia `1785-Slot X Drive Array - Drive(s) Not Detected (Press F1 to continue)`.
+  - Sin confirmación, el servidor se mantuvo esperando en pausa preventiva.
+- **Comportamiento con Discos Reinsertados (1 Beep Corto):**
+  - Al reinsertar y bloquear las dos charolas de discos SAS (450 GB 15K RPM HP Spare 517352-001) y reiniciar, el servidor emitió un único beep corto (POST exitoso y saludable).
+  - El BIOS reconoció 8192 MB (8 GB) limpios en las ranuras primarias blancas `DIMM2A` y `DIMM4B` con módulos Micron/IBM DDR3 ECC Registered.
+
+### 5.6 Configuración del BIOS Setup y Bloqueo Definitivo de Windows
+- **Acceso a Setup de Firmware:** Entrada interactiva confirmada con tecla **`F10`** (o `Supr` / Delete).
+- **Parámetros Validados:**
+  - Placa Base: HP ProLiant ML150 G6, ROMID 021, ROM Revision 01/18/2011.
+  - Procesador: Intel Xeon E5504 @ 2.00GHz (1 procesador físico, 4 cores).
+  - Red Onboard: MAC `44:1E:A1:6E:D2:E4` (HP NC107i / Broadcom MBA v11.0.8).
+  - Prioridad de Arranque USB: `USB Device Boot Priority: [High]`.
+- **Orden de Arranque Establecido (Pestaña Boot):**
+  - `1st Boot Device:` **`[CD/DVD]`**
+  - `2nd Boot Device:` **`[Network:MBA v11.0.]`**
+  - `3rd Boot Device:` **`[Disabled]`** (📌 Deshabilitación total de `[Hard Drive]`).
+- **Efecto de Bloqueo:** El sistema preexistente Windows Server 2008 R2 Enterprise (dominio gubernamental `gppan.senado.gob.mx\administrador`) queda 100% inhabilitado para arrancar.
+- **Estado de Halt y Señal de Vídeo:** Al fallar la lectura del CD y agotarse los intentos de PXE, el BIOS ejecuta un ciclo de Halt / Boot Failure. La controladora gráfica Matrox G200e desconecta la sincronización VGA analógica, provocando que el conversor activo muestre en la TV LG el mensaje de **"Sin señal"**.
+
+### 5.7 Refactorización del Servidor PXE Autónomo (Subnet Directed Broadcast)
+- **Diagnóstico del Fallo de Negociación DHCP:**
+  - En Windows 11 con múltiples interfaces activas (Wi-Fi + Ethernet Realtek + adaptadores virtuales VMware/WSL), los paquetes dirigidos a la dirección de difusión universal `255.255.255.255:68` son enrutados por el kernel hacia la interfaz con la ruta predeterminada (Wi-Fi), impidiendo que el cliente en el enlace directo Ethernet reciba el `DHCPOFFER`.
+  - La inclusión de la Opción DHCP 60 (`PXEClient`) en el puerto 67 instruye al cliente PXE a ignorar el `bootfile` y buscar un ProxyDHCP externo en el puerto 4011.
+- **Correcciones Implementadas en `headless_pxe_server.py`:**
+  1. **Subnet Directed Broadcast:** Se transmite tanto a `192.168.137.255:68` como a `255.255.255.255:68`, garantizando la salida física del paquete por la NIC Ethernet local.
+  2. **Depuración de Opción 60:** Eliminación de la Opción 60 en las respuestas del puerto 67, permitiendo que la ROM Broadcom MBA v11.0 tome el `bootfile` (`undionly.kpxe`) y la IP TFTP (`192.168.137.1`) de forma directa y unificada.
+  3. **Multi-Socket Binding:** Enlace concurrente en `192.168.137.1:67/4011/69` y `0.0.0.0:67/4011/69` con hilos dedicados para TFTP y HTTP.
+
+### 5.8 Resolución de Error SSL por Reloj de BIOS y Despliegue de BaseOS
+- **Incidente de Certificados No Válidos (`curl: (60) SSL certificate problem`):**
+  - Al iniciar el ramdisk Anaconda y cargar `dracut-initqueue`, la descarga de la imagen del instalador (`stage2`) falló repetidamente contra `https://repo.almalinux.org/...`.
+  - Causa Raíz: El reloj en tiempo real (RTC) del servidor HP se encontraba en `Tue 01/18/2011` debido a la pila de BIOS agotada. Para las herramientas criptográficas modernas en 2011, los certificados SSL/TLS emitidos en 2025/2026 figuran con fecha futura (`certificate is not yet valid`).
+- **Remediación en Tiempo Real en `boot.ipxe` y `ks.cfg`:**
+  - Redirección del origen de paquetes a protocolo HTTP plano: `http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os/`.
+  - Incorporación de parámetros de bypass de verificación en la línea de comando del kernel y Kickstart: `inst.noverifyssl` y `--noverifyssl`.
+- **Resultado del Despliegue en Vivo:**
+  - Descarga exitosa de `vmlinuz` (14 MB), `initrd.img` (218 MB), `boot.ipxe` y `ks.cfg` por HTTP local en el puerto 8000.
+  - Activación del framebuffer de consola Matrox G200e (`mgag200drmfb`) en resolución de 128×48 caracteres.
+  - Transferencia ininterrumpida de más de 1.4 GB de paquetes RPM base mediante la conexión compartida ICS de la laptop a velocidades de ~12 MB/s, procediendo al particionado desatendido del arreglo Smart Array P410 (`/dev/sda`).
+
+### 5.9 Despacho de Arranque Multi-Opción con Fallback a Disco SAS (`sanboot 0x80`)
+- **Desafío:** Pérdida recurrente de configuración en NVRAM del BIOS (batería CR2032 agotada) que revierte el equipo a los valores de fábrica de 2011, provocando bucles si el usuario no interviene en menos de 1 segundo en el menú BBS.
+- **Solución iPXE:** Transformación de `boot.ipxe` en un menú selectivo con timeout de 3 segundos:
+  - Opción por defecto: `sanboot --no-describe --drive 0x80` (ejecuta INT 13h directo sobre el MBR de la controladora Smart Array P410).
+  - Opciones secundarias: Modo Rescate de Linux por red (`inst.rescue`) y Reinstalación desatendida Kickstart (`:reinstall`).
+- **Resguardo y Versionado Oficial:** Copia de respaldo en `boot.ipxe.installer-backup` e incorporación de toda la suite de arranque (`headless_pxe_server.py`, `ks.cfg`, `boot.ipxe`) dentro del repositorio rastreado por Git en `server/pxe/` (Commit `39d8342`).
+
+### 5.10 Vía B: Arquitectura de Red de Dos Fases (inst.stage2) y Mitigación de Triple Fault
+- **Diagnóstico del Reinicio Temprano (Triple Fault en Modo Real BIOS):**
+  - Durante las pruebas con los 8 GB RDIMM Micron estabilizados, la transferencia por red de `vmlinuz` (15 MB) e `initrd.img` (228 MB) culminó en exactamente 5 segundos a 1 Gbps (243 MB entregados).
+  - Sin embargo, a los 35-45 segundos el servidor experimentó un reinicio automático de hardware.
+  - Causa Raíz 1: En los kernels modernos de RHEL 9 / AlmaLinux 9 (Linux 5.14+), el parámetro heredado de 16 bits `vga=normal` se encuentra completamente deprecado; al intentar invocar la llamada de selector de vídeo de BIOS en modo real, el kernel falla y dispara una excepción de CPU.
+  - Causa Raíz 2: La BIOS AMI 2011 opera en modo real de 16-bit al despachar llamadas iPXE/UNDI; la descompresión en memoria contigua de un ramdisk de 228 MB (que en memoria alcanza 700+ MB) colisiona con el área EBDA y buffers de la Smart Array P410.
+- **Implementación de la Vía B (Arranque Desatendido 100% Red Oficial):**
+  - **Parámetro Obligatorio `inst.stage2`:** Se sustituye `inst.repo` por `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os`, permitiendo a Dracut montar dinámicamente el entorno de Anaconda por streaming HTTP sin saturar la memoria baja.
+  - **Depuración de Parámetros de Pantalla:** Se purga `vga=normal` y se fija `nomodeset inst.text console=tty0 console=ttyS0,115200n8`, estabilizando el conversor VGA a HDMI de la GPU Matrox MGA G200e.
+  - **Alineación de Kickstart:** `selinux --permissive` y sincronización con `chronyd` para desacoplar el arranque del desfase temporal de la pila de litio agotada.
+
+
+================================================================================
+# FILE: wiki/systems/nextjs-dashboard.md
+================================================================================
+
+---
+type: system
+title: "Frontend Next.js en GitHub Pages"
+description: "Panel de control estático con autenticación en cliente para monitoreo de telemetría y estado de servidores"
+tags: [nextjs, react, tailwindcss, typescript, github-pages, ssg]
+created: 2026-11-22
+updated: 2026-11-22
+---
+
+# Frontend Next.js en GitHub Pages (`dashboard`)
+
+## 1. Arquitectura de Exportación Estática
+
+La aplicación está construida sobre **Next.js 14+** con App Router y configurada con `output: 'export'`. Esto permite que el sitio se compile a un conjunto de ficheros HTML, JS y CSS listos para ser servidos por la infraestructura CDN de GitHub Pages sin costo.
+
+## 2. Componentes Clave
+
+1. **`AuthGuard.tsx`**: Componente de orden superior que intercepta la navegación. Comprueba la validez del token JWT almacenado en `sessionStorage`; si expira o no existe, redirige de inmediato a `/login`.
+2. **`ServerMetrics.tsx`**: Representación gráfica y métricas en tiempo real de porcentaje de CPU por hilo, memoria RAM ocupada, swap, temperatura y latencia de red.
+3. **`AiStatus.tsx`**: Monitor del motor de inferencia local. Indica el modelo activo, velocidad de procesamiento en tokens por segundo (tok/s) y latencia al primer token (TTFT).
+4. **`MiningStatus.tsx`**: Panel de telemetría de XMRig con hashrate instantáneo (H/s), hilos asignados, shares validados y estado del semáforo de gobernanza de recursos.
+5. **`lib/crypto.ts`**: Utilidad criptográfica cliente que calcula el resumen SHA-256 o PBKDF2 de la contraseña antes de su transmisión a la API.
+
+## 3. Parámetros de Configuración (`next.config.mjs`)
+- `basePath`: `'/xeon-nexus-sentinel'`
+- `trailingSlash`: `true`
+- `images`: `{ unoptimized: true }`
+
+
+================================================================================
 # FILE: raw/cloud/free-tier-limits.md
 ================================================================================
 
@@ -1613,7 +1632,7 @@ Genera la estructura de directorios, los archivos de memoria OKF y todo el códi
 
 
 ================================================================================
-# FILE: log.md (HISTORIAL Y BITÁCORA RECIENTE)
+# FILE: log.md
 ================================================================================
 
 # Bitácora de Decisiones de Arquitectura y Sesiones (log.md)
@@ -1654,6 +1673,7 @@ Registro cronológico acumulativo (append-only) de decisiones de diseño, tareas
 24. **Conclusión de Instalación de AlmaLinux 9, Reinicio de Servidor e Investigación Arquitectónica de Strata:** Finalización de la instalación automatizada Kickstart transfiriendo más de 2.48 GB de paquetes RPM a través del enlace Gigabit y reinicio autónomo del servidor HP ProLiant ML150 G6. Detección de re-intentos de red PXE debido a la configuración de BIOS previa (`Hard Drive Disabled`). Formulación del procedimiento interactivo de BIOS para fijar `1st Boot Device [Hard Drive]` con Smart Array P410. Investigación exhaustiva en Gemini Notebook a partir de nuevas fuentes sobre el motor de inferencia Strata (`Niko1221/Strata`, `Strata-GLM`): análisis de jerarquía de memoria en 3 niveles (VRAM GPU, Arena de RAM anclada y Page Cache en NVMe para tabla n-gram), aceleración MTP y evaluación comparativa frente a Ollama / `llama.cpp`. Identificación de barreras de hardware en el nodo Xeon E5504 (carencia de AVX/AVX2, 8 GB de RAM vs 32–64 GB exigidos por Strata para MoE 125B y discos mecánicos SAS vs NVMe), confirmando a `llama.cpp` SSE4.2 como la solución óptima actual para modelos compactos de 1B a 3B y definiendo la hoja de ruta de ampliación a 48 GB de RAM y GPU PCIe para adopción futura de Strata.
 25. **Gobernanza de Memoria RAM DDR3 ECC (RDIMM vs UDIMM), Aislamiento de Hardware y Diagnóstico de Arranque BIOS/Smart Array:** Análisis exhaustivo de los módulos de memoria del servidor tras la intervención del usuario. Esclarecimiento del inventario real: 2 módulos adquiridos Micron 4 GB `PC3-10600R` (`MT36JBZS51272PY`, Registered ECC RDIMM de grado servidor genuino) frente a 3 módulos preexistentes heredados del chasis (2× Nanya 4GB + 1× Samsung 2GB `PC3-10600E` UDIMM Unbuffered ECC). Demostración técnica de la incompatibilidad absoluta impuesta por el código de referencia de memoria (MRC) de Intel y la BIOS AMI del HP ProLiant ML150 G6, que prohíbe terminantemente la coexistencia de RDIMM y UDIMM en la misma placa base o entre diferentes sockets en configuraciones de doble procesador. Validación de la compra en MercadoLibre como la elección correcta y formulación de la directiva de expansión futura (adquisición exclusiva de módulos RDIMM `PC3-10600R` para alcanzar 24 GB o 48 GB). Diagnóstico del síntoma "Sin señal" y bloqueo aparente de arranque: detección de la pausa obligatoria de la BIOS por cambio de capacidad de RAM (`Memory size changed, Press F1`), desincronización de frecuencia del conversor VGA-HDMI con el chip gráfico Matrox G200e y formulación de los ajustes de firmware críticos (`Quick Boot [Disabled]` para permitir la inicialización de discos SAS 15K RPM y `Select Boot Volume` en la Option ROM F8 de la Smart Array P410). Creación del documento modular `wiki/concepts/server-memory-and-bios-governance.md` y actualización integral de `wiki/entities/hp-server-node.md` e `index.md`.
 26. **Automatización de Arranque iPXE (sanboot 0x80), Telemetría de Capa de Enlace (100M/1G) y Resguardo de Herramientas de Despliegue:** Diagnóstico de la pérdida de configuración de NVRAM en cada reinicio provocado por el agotamiento total de la batería CR2032 (0V), donde la microcaída transitoria de voltaje durante el warm reset del Southbridge ICH10R corrompe la CMOS y fuerza a la placa a cargar los valores por defecto de 2011. Identificación en firmware AMI del prompt efímero de 1 segundo `Press <ESC> to boot....1` sobre la enumeración de dispositivos PCI (`PCIE Slot- 4 RAID.IRQ10`, `PCIE Bridge Ethernet.IRQ5`). Formulación e implementación de la Estrategia 1 de rescate autónomo: reconfiguración de `boot.ipxe` con un menú selectivo y cuenta regresiva de 3 segundos que ejecuta por defecto `sanboot --no-describe --drive 0x80` para ceder el control directo al MBR de la controladora Smart Array P410 sin depender de la memoria de la placa. Descubrimiento y formulación de la telemetría de capa de enlace (L2/PHY): la transición de velocidad de enlace en la laptop de 100 Mbps (modo BIOS/Standby) a 1 Gbps (driver Linux `tg3`) como indicador inequívoco del estado del kernel sin depender del vídeo. Resguardo redundante: creación de `boot.ipxe.installer-backup`, incorporación de toda la suite en `server/pxe/` y commit formal en Git (`39d8342`). Creación de `wiki/concepts/headless-boot-diagnostics-and-telemetry.md`, actualización de `wiki/systems/headless-pxe-netboot.md` e `index.md`.
-
+27. **Despliegue Vía B (inst.stage2 Oficial), Diagnóstico de Ramdisk Masivo en Legacy BIOS y Purga de Parámetros VGA:** Análisis forense del reinicio del servidor tras la transferencia Gigabit de 243 MB (`vmlinuz` 15 MB e `initrd.img` 228 MB). Identificación de la causa raíz de la excepción de CPU (*Triple Fault*): colapso de la BIOS AMI de 2011 al intentar mapear en modo real un ramdisk que supera 700 MB descomprimidos en memoria, combinado con el uso del parámetro obsoleto `vga=normal` incompatible con el kernel 5.14+ de RHEL 9. Implementación y validación de la **Vía B (100% Red Oficial)**: adopción de la arquitectura estándar de AlmaLinux 9 en dos fases mediante `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os`, purga estricta de parámetros de vídeo de 16 bits fijando `nomodeset inst.text console=tty0 console=ttyS0,115200n8` para mitigar la pérdida de sincronismo del conversor VGA-HDMI, y configuración de `ks.cfg` con `selinux --permissive` y `chronyd` para inmunizar el despliegue frente a la fecha desfasada de 2011. Establecimiento de la directiva operativa ágil de confirmación inmediata de reinicio por parte del usuario.
+28. **Conclusión Exitosa de Instalación Kickstart de AlmaLinux 9, Transferencia de 1.4 GB y Configuración de Arranque SAS Local:** Ejecución completa y autónoma de la instalación desatendida mediante Vía B. A las 13:46:06 Anaconda solicitó y procesó `ks.cfg`, particionó el arreglo RAID de la Smart Array P410 (`/dev/sda`), y descargó e instaló más de 1.4 GB de paquetes RPM base a velocidades de entre 23 y 31 MB/s a través de la conexión compartida ICS de la laptop a 1 Gbps. El script `%post` habilitó el acceso root por SSH (`PermitRootLogin yes`) y el servicio horario `chronyd`. Reconfiguración preventiva de `boot.ipxe` con la directiva predeterminada `local_sas` (`sanboot --no-describe --drive 0x80`), garantizando que tras el reinicio automático del instalador el servidor arranque de forma directa desde el almacenamiento local SAS. Integración de variables y credenciales operativas del servidor (`192.168.137.50`, usuario `root`, clave `nexusadmin2026!`, puertos 22 y 9090) en `.env` y `.env.example`.
 
 
