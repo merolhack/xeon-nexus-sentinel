@@ -1,9 +1,9 @@
 # XEON-NEXUS-SENTINEL-LLM-WIKI-MASTER.md — Compendio Maestro de Conocimiento Xeon-Nexus-Sentinel
 - **Notebook URL:** https://notebook.google.com/notebook/1bd607be-628c-4228-a1f5-5b4f5dd59093
 - **Arquitectura:** Google OKF v0.2 + Karpathy 3-Layer LLM Wiki (`raw/`, `wiki/`, `SPEC.md`)
-- **Archivos Compilados:** 24
-- **SHA-256:** `66cce9bab13ad54fcedda1a137335e80e4fc5ebb9607bcfa19668817f1ad9111`
-- **Fecha de Compilación:** 2026-11-26T22:40:06.629Z
+- **Archivos Compilados:** 26
+- **SHA-256:** `0a42e26686b3dc2d6d05d2f8ee7b9602bcc2a7b8c8889f7a842e152afe2402aa`
+- **Fecha de Compilación:** 2026-11-26T22:44:27.353Z
 
 
 ================================================================================
@@ -227,6 +227,8 @@ Bienvenido a la memoria central de **Xeon-Nexus-Sentinel**. Este índice es la r
 * [SPEC.md](file:///SPEC.md) — Esquema OKF v0.2 de la memoria de conocimiento.
 * [log.md](file:///log.md) — Bitácora de cambios y decisiones técnicas.
 - [Guía de Expansión de Hardware, Despliegue de LLMs SSE4.2 y Orquestación Cripto](wiki/concepts/hardware-upgrades-and-crypto-orchestration.md)
+- [Nodo de Trabajo: Laptop THUNDEROBOT ZERO](wiki/entities/thunderobot-laptop-node.md)
+- [Arquitectura Híbrida: Laptop RTX 4060 + Servidor HP 24/7](wiki/concepts/hybrid-ai-and-crypto-synergy.md)
 
 
 ================================================================================
@@ -352,6 +354,92 @@ updated: 2026-11-22
 * Conexión vía WiFi hacia el punto de acceso / repetidor compartido con el servidor.
 * Sesiones de terminal OpenSSH y visualización del panel web de Cockpit en navegador.
 * Gestión de repositorios en GitHub mediante `gh` CLI y flujos CI/CD.
+
+
+================================================================================
+# FILE: wiki/entities/thunderobot-laptop-node.md
+================================================================================
+
+---
+type: entity
+title: "Nodo de Trabajo: Laptop THUNDEROBOT ZERO (Windows 11 Pro)"
+description: "Estación de trabajo y control con Intel Core i9-13900HX, 32 GB DDR5, NVIDIA RTX 4060 8GB y enlace Gigabit directo al servidor HP"
+tags: [laptop, thunderobot-zero, rtx-4060, i9-13900hx, windows11, cuda, hybrid-ai]
+created: 2026-11-26
+updated: 2026-11-26
+---
+
+# Nodo de Trabajo: Laptop THUNDEROBOT ZERO (`laptop-node`)
+
+## 1. Identificación y Rol Arquitectónico
+* **Identificador de Nodo:** `laptop-node` / `THUNDEROBOT-ZERO`.
+* **Sistema Operativo:** Microsoft Windows 11 Pro (64-bit, Build 26200).
+* **Rol en el Ecosistema:** Estación principal de desarrollo, interfaz gráfica de usuario (Next.js Dashboard, Cockpit), orquestación de agentes IA (Antigravity IDE) y aceleración por GPU (CUDA / Tensor Cores) para inferencia rápida y generación de embeddings.
+* **Topología de Red:** Puerta de enlace (`192.168.137.1`) que provee conexión a Internet compartida (ICS) y enlace Gigabit directo por cable Ethernet hacia el servidor HP ProLiant ML150 G6 (`192.168.137.50`).
+
+---
+
+## 2. Especificaciones de Hardware Auditadas en Vivo (PowerShell / CIM)
+
+### A. Procesador (CPU)
+* **Modelo:** 13th Gen Intel Core i9-13900HX (Raptor Lake).
+* **Topología de Núcleos:** 24 núcleos físicos / 32 procesadores lógicos:
+  * 8 Performance-cores (P-cores) con Hyper-Threading (hasta 5.40 GHz Turbo).
+  * 16 Efficient-cores (E-cores) para tareas en segundo plano.
+* **Caché L3:** 36 MB Intel Smart Cache.
+* **Conjunto de Instrucciones:** AVX, AVX2, FMA3, BMI2, SSE4.2, Intel DL Boost (VNNI) para aceleración de inferencia en CPU.
+
+### B. Memoria RAM
+* **Capacidad Total:** 32 GB (34,359,738,368 bytes / 33.28 GB visibles).
+* **Configuración:** 2 ranuras SODIMM pobladas en Dual-Channel:
+  * Ranura 1: 16 GB Samsung DDR5-5600 MT/s (`M425R2GA3BB0-CWMOD`).
+  * Ranura 2: 16 GB Samsung DDR5-5600 MT/s (`M425R2GA3BB0-CWMOD`).
+* **Memoria Libre en Auditoría:** ~7.28 GB libres físicos en reposo de desarrollo.
+
+### C. Subsistema Gráfico (GPU Dual)
+1. **GPU Integrada (Bajo Consumo):**
+   * Intel UHD Graphics (Raptor Lake-S Mobile Graphics Controller).
+   * 1 GB RAM asignada, encargada de la pantalla principal y reproducción multimedia ligera.
+2. **GPU Dedicada (Aceleración IA / CUDA):**
+   * **Modelo:** NVIDIA GeForce RTX 4060 Laptop GPU.
+   * **Arquitectura:** Ada Lovelace (4 nm TSMC).
+   * **VRAM Dedicada:** 8 GB GDDR6 (8,188 MiB total, ~7,956 MiB libres para modelos).
+   * **Capacidad de Cómputo (Compute Capability):** **8.9** (Tensor Cores de 4ª generación, núcleos RT de 3ª generación, soporte nativo FP8, FP16, INT8, INT4).
+   * **Controlador NVIDIA:** Versión 562.24 (Driver 32.0.16.2124), compatible con CUDA 12.x.
+   * **Temperatura en Reposo:** ~45.8 °C con consumo base de 15.0W.
+
+### D. Almacenamiento
+* **Unidad Física:** SSD NVMe M.2 de 1 TB (`KPEGYMTBW2U001TCJD`), Bus PCIe NVMe, estado Healthy.
+* **Partición C: (NTFS):** 1,022 GB de capacidad total, ~23.2 GB libres (requiere políticas de retención con `rclone` hacia Google Drive de 5 TiB).
+
+### E. Conectividad y Redes
+* **Ethernet Primario (Enlace Servidor):** Realtek PCIe GbE Family Controller (`74:D4:DD:44:D8:80`) operando a **1 Gbps Full Duplex** hacia el servidor HP (`192.168.137.1` -> `192.168.137.50`).
+* **Wi-Fi WAN:** Intel Wi-Fi 6 AX201 160MHz (`F0:20:FF:14:BC:16`).
+* **Virtualización:** Hyper-V activado (`HypervisorPresent: True`), WSL2 operativo con Ubuntu 20.04.
+
+---
+
+## 3. Scripts Estándar de PowerShell para Auditoría en Windows 11
+
+Para reproducir esta telemetría en cualquier momento sin herramientas de terceros:
+
+```powershell
+# 1. CPU y Núcleos
+Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed, L3CacheSize | Format-List
+
+# 2. GPU NVIDIA (CUDA / VRAM / Drivers)
+nvidia-smi --query-gpu=name,memory.total,memory.free,driver_version,compute_cap,power.draw,temperature.gpu --format=csv,noheader,nounits
+
+# 3. Módulos de Memoria Física
+Get-CimInstance Win32_PhysicalMemory | Select-Object DeviceLocator, Capacity, Speed, Manufacturer, PartNumber | Format-Table -AutoSize
+
+# 4. Salud de Discos y Espacio Libre
+Get-PhysicalDisk | Select-Object DeviceId, FriendlyName, MediaType, Size, BusType, HealthStatus | Format-Table -AutoSize
+Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID, FileSystem, Size, FreeSpace, Description | Format-Table -AutoSize
+
+# 5. Adaptadores de Red y Velocidad de Enlace
+Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed, MacAddress | Format-Table -AutoSize
+```
 
 
 ================================================================================
@@ -619,6 +707,90 @@ La arquitectura en dos fases (Vía B con `inst.stage2` oficial) resolvió de for
 1. **Fase de Instalación:** Anaconda completó el particionado de discos SAS de 15,000 RPM, descargó 1.4 GB de paquetes RPM base por Gigabit y configuró OpenSSH y NTP antes del reinicio.
 2. **Fase de Producción:** Con la opción predeterminada `local_sas` (`sanboot --no-describe --drive 0x80`) en `boot.ipxe`, el servidor arranca de forma autónoma desde el almacenamiento SAS local.
 3. **Acceso Operativo:** Puerto SSH 22 disponible en `192.168.137.50` con credencial `root` / `nexusadmin2026!`.
+
+
+================================================================================
+# FILE: wiki/concepts/hybrid-ai-and-crypto-synergy.md
+================================================================================
+
+---
+type: concept
+title: "Arquitectura Híbrida: Laptop NVIDIA RTX 4060 + Servidor HP ProLiant 24/7"
+description: "Sinergia distribuida de cómputo entre la estación de trabajo Windows 11 con GPU Ada Lovelace y el servidor AlmaLinux 9 headless para IA y Criptomonedas"
+tags: [hybrid-architecture, rtx-4060, xeon-e5504, distributed-ai, llama-rpc, depin, crypto-orchestrator, denet-storage]
+created: 2026-11-26
+updated: 2026-11-26
+---
+
+# Arquitectura Híbrida: Laptop NVIDIA RTX 4060 + Servidor HP ProLiant 24/7
+
+## 1. Fundamento de la Sinergia Híbrida
+El ecosistema combina dos perfiles de hardware complementarios unidos por un **enlace físico Gigabit directo de 1 Gbps con latencia sub-milisegundo (< 0.3 ms)**:
+1. **La Laptop (THUNDEROBOT ZERO):** Computador de alta potencia interactiva con Intel Core i9-13900HX (24C/32T, 36MB L3), 32 GB DDR5 y GPU dedicada **NVIDIA GeForce RTX 4060 (8 GB VRAM GDDR6, Compute 8.9)**.
+2. **El Servidor (HP ProLiant ML150 G6):** Nodo de infraestructura empresarial continuo con Intel Xeon E5504, 8 GB DDR3 ECC Registered, controlador Smart Array P410 y discos SAS de 15,000 RPM en RAID (340 GB libres en `/home`).
+
+```text
+[ LAPTOP THUNDEROBOT ZERO ] (192.168.137.1)
+  ├── CPU: i9-13900HX (24C / 32T, AVX2, VNNI)
+  ├── RAM: 32 GB DDR5-5600 MT/s
+  └── GPU: NVIDIA RTX 4060 (8 GB GDDR6 Ada Lovelace)
+         │
+         │  ◄── Enlace Ethernet Gigabit 1 Gbps (Latencia < 0.3 ms) ──►
+         ▼
+[ SERVIDOR HP PROLIANT ML150 G6 ] (192.168.137.50)
+  ├── CPU: Intel Xeon E5504 (Nehalem, SSE4.2)
+  ├── RAM: 8 GB DDR3 ECC Micron RDIMM
+  └── SAS: Smart Array P410 (RAID SAS 15K RPM, 340 GB /home)
+```
+
+---
+
+## 2. Sinergia en Inteligencia Artificial (IA Híbrida Distribuida)
+
+### A. Reparto de Roles y Tareas de IA
+| Carga de Trabajo | Nodo Óptimo | Justificación Técnica |
+| :--- | :--- | :--- |
+| **Generación Interactiva Rápida (50–90 tok/s)** | **Laptop (RTX 4060 GPU)** | Los Tensor Cores de 4ª generación en Ada Lovelace procesan modelos 7B–8B (Llama-3.1-8B, Qwen2.5-7B) en Q4_K_M o FP8 a velocidades interactivas instantáneas. |
+| **Generación de Embeddings Vectoriales** | **Laptop (RTX 4060 GPU)** | La GPU procesa lotes masivos de texto a alta velocidad usando modelos como `bge-m3` o `nomic-embed-text`. |
+| **Base de Datos Vectorial y RAG Continuo** | **Servidor HP (AlmaLinux 9)** | Aloja la base de datos vectorial (Qdrant, ChromaDB, PGvector) en `/home`. Permite que la base de conocimiento esté siempre en línea sin gastar memoria de la laptop. |
+| **Inferencia Distribuida (llama.cpp RPC)** | **Laptop (GPU) + Servidor (RAM)** | Para modelos de 14B a 32B que exceden los 8 GB de la GPU: la laptop ejecuta capas en VRAM y descarga el resto hacia la RAM del servidor vía `rpc-server`. |
+| **Agentes Autónomos y Scraping Nocturno** | **Servidor HP (Headless)** | Tareas programadas de análisis web, clasificación de archivos o resúmenes periódicos corren 24/7 en segundo plano sin drenar la batería de la laptop. |
+
+### B. Inferencia Distribuida con `llama.cpp` RPC
+1. **En el Servidor HP ProLiant (`192.168.137.50`):**
+   Se ejecuta el binario `rpc-server` en el puerto 50052, exponiendo los 7.0 GiB de RAM libres para hospedar tensores del modelo:
+   ```bash
+   /home/llama.cpp/build/bin/rpc-server -p 50052 -H 0.0.0.0
+   ```
+2. **En la Laptop (`192.168.137.1`):**
+   `llama-cli` o `llama-server` compila con aceleración CUDA completa y divide el modelo:
+   ```bash
+   llama-server -m models/Qwen2.5-14B-Instruct-Q4_K_M.gguf -ngl 24 --rpc 192.168.137.50:50052
+   ```
+   * Las primeras 24 capas se aceleran a máxima velocidad en la RTX 4060 (8 GB VRAM) y las capas restantes se computan en la RAM del servidor HP a través del enlace Gigabit.
+
+---
+
+## 3. Sinergia en Criptomonedas, DePIN y Almacenamiento Descentralizado
+
+### A. Reparto de Responsabilidades Cripto
+* **Laptop (Estación de Operación Segura e Interfaz):**
+  * Gestión de claves privadas, billeteras frías/calientes (Metamask, Rabby), interfaces de usuario Web3 y dashboards de monitoreo.
+  * No apta para tareas 24/7 (el desgaste de ventiladores, consumo térmico y el espacio libre limitado en el SSD NVMe de ~23 GB desaconsejan alojar nodos masivos).
+* **Servidor HP ProLiant (Worker Desatendido 24/7):**
+  * Hardware empresarial diseñado para operar 365 días al año sin descanso.
+  * Los discos SAS mecánicos de 15,000 RPM soportan ciclos continuos de lectura/escritura sin degradación de celdas flash.
+
+### B. Despliegue de DeNet Storage y Almacenamiento Descentralizado
+* **Ventaja Crítica:** La laptop tiene solo ~23 GB libres en su NVMe, lo que imposibilita almacenar datos de terceros. El servidor dispone de **340 GB libres en `/home`**.
+* **Arquitectura:**
+  * Se asignan **200 GB a 250 GB** del arreglo SAS en el servidor HP para el nodo *Datakeeper* de **DeNet Storage** mediante un contenedor Docker.
+  * La laptop administra y monitorea el nodo a través de la red local, recibiendo las recompensas en su wallet sin ocupar espacio en su disco local.
+
+### C. Redes DePIN y Automatización de Nodos
+1. **Compartición de Ancho de Banda (Grass Network):** El servidor corre el nodo Docker de Grass 24/7 conectado al enlace ICS de la laptop o router, generando puntos continuos.
+2. **Bots de Trading y Arbitraje DeFi:** Scripts en Python en el servidor HP monitorizan pares de liquidez o ejecutan órdenes de compra/venta programadas las 24 horas del día.
+3. **Proxy RPC Privado:** El servidor cachea llamadas RPC hacia redes EVM y Solana, proporcionando a la laptop consultas instantáneas sin sufrir bloqueos por límites de peticiones (*rate-limits*) de proveedores públicos.
 
 
 ================================================================================
@@ -1880,4 +2052,18 @@ Registro cronológico acumulativo (append-only) de decisiones de diseño, tareas
    - **Despliegue de LLMs en CPU SSE4.2:** Determinación de que la CPU carece de AVX/AVX2, requiriendo compilación de `llama.cpp` con `-DLLAMA_AVX=OFF -DLLAMA_AVX2=OFF -DLLAMA_FMA=OFF -DLLAMA_F16C=OFF`. Identificación de modelos óptimos en GGUF Q4_K_M para los 7.0 GiB libres en RAM (Llama-3.2-1B/3B, Qwen2.5-1.5B/3B con `--mlock`).
    - **DeNet Storage y Orquestación Cripto:** Asignación de 150–250 GB en `/home` (XFS sobre arreglo SAS RAID) para nodo Datakeeper de DeNet Storage. Rol del servidor como orquestador 24/7 sin minería de CPU (Grass Network, proxy/caché RPC blockchain, bots de trading/arbitraje y central de métricas Prometheus/Grafana).
    - **Documentación:** Creación de `wiki/concepts/hardware-upgrades-and-crypto-orchestration.md` y actualización de `wiki/entities/hp-server-node.md` e `index.md`.
+
+31. **Auditoría de Laptop Windows 11 (i9-13900HX, RTX 4060, 32GB DDR5) y Arquitectura Híbrida con Servidor HP:**
+   - **Auditoría de Hardware de Estación Local:** Análisis profundo del nodo de trabajo `laptop-node` (THUNDEROBOT ZERO) bajo Windows 11 Pro:
+     * CPU: 13th Gen Intel Core i9-13900HX (24 núcleos / 32 hilos, 36 MB L3 cache, AVX2, VNNI).
+     * RAM: 32 GB DDR5-5600 MT/s en Dual-Channel (2x 16 GB Samsung `M425R2GA3BB0-CWMOD`).
+     * GPU Dedicada: NVIDIA GeForce RTX 4060 Laptop GPU (8 GB GDDR6 Ada Lovelace, Compute Capability 8.9, Tensor Cores 4ª Gen, ~7.95 GB VRAM libres).
+     * GPU Integrada: Intel UHD Graphics Raptor Lake (1 GB).
+     * Almacenamiento: SSD NVMe M.2 de 1 TB (23.2 GB libres en C:).
+     * Red: Realtek Gigabit Ethernet a 1 Gbps directo hacia el servidor HP (`192.168.137.1` <-> `192.168.137.50`) y Wi-Fi 6 AX201.
+   - **Formulación de Arquitectura Híbrida IA:** División de responsabilidades computacionales aprovechando el enlace de 1 Gbps (<0.3 ms de latencia):
+     * Laptop (RTX 4060): Inferencia interactiva de alta velocidad (50–90 tok/s en modelos 7B/8B como Llama-3.1 y Qwen2.5) y generación de embeddings vectoriales.
+     * Servidor HP (Xeon E5504 + 8GB ECC + SAS RAID): Hospedaje 24/7 de bases de datos vectoriales (RAG persistente), agentes en segundo plano y descarga de capas mediante `llama.cpp` RPC Server (`--rpc 192.168.137.50:50052`) para modelos que superen los 8 GB de la GPU.
+   - **Sinergia Cripto y DePIN:** El servidor asume el rol de worker 24/7 asignando 200–250 GB de su arreglo SAS para DeNet Storage (protegiendo el NVMe de la laptop de 23 GB libres), colocalizando nodos DePIN (Grass) y bots de trading desatendidos, mientras la laptop actúa como centro de control seguro e interfaz de billeteras.
+   - **Documentación:** Creación de `wiki/entities/thunderobot-laptop-node.md`, `wiki/concepts/hybrid-ai-and-crypto-synergy.md` y actualización de `index.md`.
 

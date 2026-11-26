@@ -88,3 +88,4 @@ Tras el reinicio del servidor y la cesión de control al almacenamiento SAS loca
   * Zona horaria: `America/Mexico_City (CST, -0600)`.
   * La hora del RTC y del reloj del sistema ha quedado corregida automáticamente, neutralizando el desfase de fábrica de 2011.
 * **Hoja de Ruta de Expansión y Cargas de Trabajo:** Véase [hardware-upgrades-and-crypto-orchestration.md](../concepts/hardware-upgrades-and-crypto-orchestration.md) para detalles sobre actualización a doble socket Xeon 5600, disipador HP `513944-001`, memorias RDIMM, viabilidad de GPU 75W, compilación de `llama.cpp` (SSE4.2) y orquestación DeNet Storage / Cripto.
+* **Topología de Red y Autonomía 24/7:** Véase [dual-wan-and-repeater-network-topology.md](../systems/dual-wan-and-repeater-network-topology.md) para detalles del desacoplamiento de la laptop mediante repetidor AC1200, IP aliasing y estrategia multi-proveedor (Megacable Fibra + EniNetworks WISP).

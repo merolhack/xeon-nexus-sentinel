@@ -69,3 +69,12 @@ Registro cronológico acumulativo (append-only) de decisiones de diseño, tareas
      * Servidor HP (Xeon E5504 + 8GB ECC + SAS RAID): Hospedaje 24/7 de bases de datos vectoriales (RAG persistente), agentes en segundo plano y descarga de capas mediante `llama.cpp` RPC Server (`--rpc 192.168.137.50:50052`) para modelos que superen los 8 GB de la GPU.
    - **Sinergia Cripto y DePIN:** El servidor asume el rol de worker 24/7 asignando 200–250 GB de su arreglo SAS para DeNet Storage (protegiendo el NVMe de la laptop de 23 GB libres), colocalizando nodos DePIN (Grass) y bots de trading desatendidos, mientras la laptop actúa como centro de control seguro e interfaz de billeteras.
    - **Documentación:** Creación de `wiki/entities/thunderobot-laptop-node.md`, `wiki/concepts/hybrid-ai-and-crypto-synergy.md` y actualización de `index.md`.
+
+32. **Topología de Red Autónoma 24/7, Repetidor AC1200, IP Aliasing y Estrategia Multi-ISP (Megacable / EniNetworks):**
+   - **Desacoplamiento de la Estación Móvil:** Análisis de requerimientos para independizar el servidor HP ProLiant ML150 G6 de la laptop, permitiendo que el servidor opere 24/7 de forma autónoma y la laptop se desplace con libertad por la casa.
+   - **Topología con Repetidor WiFi AC1200:** Esquema de puente inalámbrico en la banda de 5 GHz conectado al módem de Megacable. Asignación del Puerto LAN 1 a `enp4s0` (producción de AlmaLinux 9) y Puerto LAN 2 al controlador `iLO 100i` (administración fuera de banda y control de energía).
+   - **Estrategia Multi-IP (IP Aliasing con `nmcli`):** Configuración en `enp4s0` para soportar simultáneamente la IP asignada por el módem (con gateway a Internet) y una IP estática secundaria de laboratorio (`192.168.137.50/24`, sin gateway), preservando compatibilidad inmediata para reconectar el cable directo a 1 Gbps para inferencia distribuida.
+   - **Aprovechamiento Multi-ISP Dual 24/7:**
+     * Megacable (Fibra Óptica FTTH): Asignado a tráfico masivo, nodo DeNet Storage, inferencia remota y APIs por su alto ancho de banda y latencia inferior a 10 ms.
+     * EniNetworks (Antena WISP en Techo): Asignado a monetización DePIN mediante nodo Grass Network (aprovechando una segunda dirección IP pública residencial independiente), línea de respaldo por failover y bots de arbitraje blockchain.
+   - **Documentación:** Creación de `wiki/systems/dual-wan-and-repeater-network-topology.md` y actualización de `wiki/entities/hp-server-node.md` e `index.md`.
