@@ -27,6 +27,10 @@ updated: 2026-11-23
 ## 3. Especificaciones de Hardware Verificadas en Laboratorio
 
 * **Procesadores:** Dual Intel Xeon LGA1366 (Nehalem, 4 núcleos por zócalo, SSE4.2, triple canal de memoria DDR3 ECC).
+* **Memoria RAM Verificada y Población de Slots:**
+  * **Configuración Actual Operativa:** 8192 MB (8 GB) limpios en DDR3-1333 Registered ECC.
+  * **Módulos Instalados:** 2 × Micron 4 GB `PC3-10600R` (`MT36JBZS51272PY-1G4D1`) en zócalos primarios blancos `DIMM 2A` y `DIMM 4B` de CPU1.
+  * **Gobernanza de Memoria y Coexistencia:** Prohibición absoluta de mezcla entre módulos RDIMM y UDIMM (`PC3-10600E`). Los módulos preexistentes heredados (2x Nanya 4GB + 1x Samsung 2GB UDIMM) fueron desacoplados para garantizar la estabilidad eléctrica. (Véase detalle en [server-memory-and-bios-governance.md](../concepts/server-memory-and-bios-governance.md)).
 * **Controlador de Almacenamiento:** HP Smart Array P410 con caché SAS/SATA y arreglo RAID activo.
 * **Unidades de Disco Físicas (Identificadas en Bahías Hot-Plug):**
   * **Bahía 1:** 450 GB SAS 6G Dual-Port 15,000 RPM (HP Spare: `517352-001`).
