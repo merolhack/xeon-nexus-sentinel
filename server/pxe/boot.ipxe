@@ -1,0 +1,42 @@
+#!ipxe
+# ========================================================
+#   Xeon Nexus Sentinel - Selector de Arranque Automatizado
+# ========================================================
+
+set menu-timeout 3000
+set submenu-timeout ${menu-timeout}
+
+:start
+menu Xeon Nexus Sentinel - Menu de Inicio
+item --default --key s local_sas  [S] Arrancar AlmaLinux 9 desde Disco SAS Local (0x80)
+item --key r rescue_boot          [R] Arrancar Modo Rescate de Linux por Red
+item --key i reinstall            [I] Reinstalar AlmaLinux 9 (Kickstart Automático)
+choose --timeout ${menu-timeout} --default local_sas target && goto ${target}
+
+:local_sas
+echo ========================================================
+echo   Arrancando AlmaLinux 9 desde disco SAS local (0x80)...
+echo ========================================================
+sanboot --no-describe --drive 0x80 || goto fallback_exit
+
+:fallback_exit
+echo [AVISO] sanboot fallo o no respondio. Intentando salir a BIOS...
+exit 1
+
+:rescue_boot
+echo ========================================================
+echo   Cargando Kernel de Rescate AlmaLinux 9...
+echo ========================================================
+set base-url http://192.168.137.1:8000
+kernel ${base-url}/vmlinuz initrd=initrd.img inst.repo=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os/ inst.rescue inst.text inst.noverifyssl ip=dhcp console=tty0 console=ttyS0,115200n8
+initrd ${base-url}/initrd.img
+boot
+
+:reinstall
+echo ========================================================
+echo   Iniciando Instalacion Desatendida Kickstart...
+echo ========================================================
+set base-url http://192.168.137.1:8000
+kernel ${base-url}/vmlinuz initrd=initrd.img inst.repo=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os/ inst.ks=${base-url}/ks.cfg inst.text inst.noverifyssl ip=dhcp console=tty0 console=ttyS0,115200n8
+initrd ${base-url}/initrd.img
+boot

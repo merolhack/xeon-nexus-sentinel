@@ -1,0 +1,15 @@
+#!ipxe
+echo ========================================================
+echo   Xeon Nexus Sentinel - AlmaLinux 9 Headless Netboot
+echo ========================================================
+
+set base-url http://192.168.137.1:8000
+
+echo Descargando kernel de AlmaLinux 9 (vmlinuz)...
+kernel ${base-url}/vmlinuz initrd=initrd.img inst.repo=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os/ inst.ks=${base-url}/ks.cfg inst.text inst.noverifyssl ip=dhcp console=tty0 console=ttyS0,115200n8
+
+echo Descargando ramdisk de AlmaLinux 9 (initrd.img)...
+initrd ${base-url}/initrd.img
+
+echo Iniciando instalacion desatendida...
+boot
