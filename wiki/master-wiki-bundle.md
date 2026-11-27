@@ -1,9 +1,9 @@
 # XEON-NEXUS-SENTINEL-LLM-WIKI-MASTER.md — Compendio Maestro de Conocimiento Xeon-Nexus-Sentinel
 - **Notebook URL:** https://notebook.google.com/notebook/1bd607be-628c-4228-a1f5-5b4f5dd59093
 - **Arquitectura:** Google OKF v0.2 + Karpathy 3-Layer LLM Wiki (`raw/`, `wiki/`, `SPEC.md`)
-- **Archivos Compilados:** 27
-- **SHA-256:** `715d74bb228a2acd7047f2f19803ed28481e2f35dab9489406047cb6e923c4d9`
-- **Fecha de Compilación:** 2026-11-26T23:13:07.813Z
+- **Archivos Compilados:** 29
+- **SHA-256:** `da4491f8c2e410a1886f692635de75c16a33573140bd5fbbb2fe065032d77113`
+- **Fecha de Compilación:** 2026-11-27T18:23:24.688Z
 
 
 ================================================================================
@@ -210,6 +210,7 @@ Bienvenido a la memoria central de **Xeon-Nexus-Sentinel**. Este índice es la r
 * [strata-vs-ollama-inference.md](file:///wiki/concepts/strata-vs-ollama-inference.md) — Análisis arquitectónico de Strata Frameworks (MoE Qwen3.8/GLM), jerarquía de memoria y viabilidad frente a Ollama en CPU Xeon Nehalem.
 * [server-memory-and-bios-governance.md](file:///wiki/concepts/server-memory-and-bios-governance.md) — Gobernanza de memoria DDR3 ECC (RDIMM vs UDIMM), reglas de coexistencia y configuración de arranque en BIOS y Smart Array P410.
 * [headless-boot-diagnostics-and-telemetry.md](file:///wiki/concepts/headless-boot-diagnostics-and-telemetry.md) — Diagnóstico de arranque sin monitor, telemetría de capa física PHY (100M/1G) y automatización de inicio iPXE (sanboot).
+* [local-vlm-hallucinations-and-autonomous-harness-limits.md](file:///wiki/concepts/local-vlm-hallucinations-and-autonomous-harness-limits.md) — Límites de modelos VLM locales (8B), riesgos en harnesses autónomos y la paradoja de la verificación humana.
 
 ### 3. Entidades de Hardware e Infraestructura (`wiki/entities/`)
 * [hp-server-node.md](file:///wiki/entities/hp-server-node.md) — Servidor empresarial HP ProLiant ML150 G6 en modo headless con AlmaLinux 9 Minimal.
@@ -230,665 +231,40 @@ Bienvenido a la memoria central de **Xeon-Nexus-Sentinel**. Este índice es la r
 - [Nodo de Trabajo: Laptop THUNDEROBOT ZERO](wiki/entities/thunderobot-laptop-node.md)
 - [Arquitectura Híbrida: Laptop RTX 4060 + Servidor HP 24/7](wiki/concepts/hybrid-ai-and-crypto-synergy.md)
 - [Topología de Red Autónoma: Repetidor AC1200 y Multi-ISP](wiki/systems/dual-wan-and-repeater-network-topology.md)
+- [Stack de Agente Autónomo Local: Vixl, LiteLLM y Ollama](wiki/systems/local-autonomous-agent-stack-vixl-litellm.md)
 
 
 ================================================================================
-# FILE: wiki/entities/hp-server-node.md
-================================================================================
-
----
-type: entity
-title: "Nodo Físico: Servidor HP ProLiant ML150 G6"
-description: "Servidor empresarial torre de doble zócalo Xeon operando en modo headless con AlmaLinux 9 Minimal"
-tags: [servidor, hp-proliant, almalinux, headless, ilo, xeon, smart-array, ipxe]
-created: 2026-11-22
-updated: 2026-11-23
----
-
-# Nodo Físico: Servidor HP ProLiant ML150 G6 (`hp-server-node`)
-
-## 1. Identificación y Rol
-
-* **Hostname Local:** `xeon-sentinel.local` o IP estática en red interna.
-* **Sistema Operativo Destino:** AlmaLinux 9.x Minimal (x86_64, sin interfaz gráfica). Instalación desatendida completada en arreglo RAID Smart Array P410 (`/dev/sda`).
-* **Sistema Operativo Preexistente (Erradicado):** Windows Server 2008 R2 Enterprise (sobrescrito y particionado por Kickstart).
-* **Modo Operativo:** Headless continuo (sin teclado ni monitor conectados en producción).
-* **Propósito:** Nodo de cómputo en segundo plano para minería RandomX de baja prioridad, ejecución cuantizada de modelos ligeros con `llama.cpp` y recolección de métricas.
-
-## 2. Puntos de Entrada y Control
-
-* **HP iLO 100i (BMC):** Puerto Ethernet dedicado o compartido. Permite control de energía (power-on/reboot forzado) e inspección de salud térmica.
-* **OpenSSH (Puerto 22):** Acceso administrativo seguro preconfigurado con usuario `root`, contraseña `nexusadmin2026!` y directiva `PermitRootLogin yes`.
-* **Cockpit (Puerto 9090):** Panel web nativo para gestión de discos, red, paquetes y terminal web directa.
-* **Daemon Local (xeon-sentinel):** Servicio systemd que recopila telemetría y controla el gobernador de alternancia.
-
-## 3. Especificaciones de Hardware Verificadas en Laboratorio
-
-* **Procesadores:** Dual Intel Xeon LGA1366 (Nehalem, 4 núcleos por zócalo, SSE4.2, triple canal de memoria DDR3 ECC).
-* **Memoria RAM Verificada y Población de Slots:**
-  * **Configuración Actual Operativa:** 8192 MB (8 GB) limpios en DDR3-1333 Registered ECC.
-  * **Módulos Instalados:** 2 × Micron 4 GB `PC3-10600R` (`MT36JBZS51272PY-1G4D1`) en zócalos primarios blancos `DIMM 2A` y `DIMM 4B` de CPU1.
-  * **Gobernanza de Memoria y Coexistencia:** Prohibición absoluta de mezcla entre módulos RDIMM y UDIMM (`PC3-10600E`). Los módulos preexistentes heredados (2x Nanya 4GB + 1x Samsung 2GB UDIMM) fueron desacoplados para garantizar la estabilidad eléctrica. (Véase detalle en [server-memory-and-bios-governance.md](../concepts/server-memory-and-bios-governance.md)).
-* **Controlador de Almacenamiento:** HP Smart Array P410 con caché SAS/SATA y arreglo RAID activo.
-* **Unidades de Disco Físicas (Identificadas en Bahías Hot-Plug):**
-  * **Bahía 1:** 450 GB SAS 6G Dual-Port 15,000 RPM (HP Spare: `517352-001`).
-  * **Bahía 2:** 450 GB SAS 6G Dual-Port 15,000 RPM (HP Spare: `517352-001`).
-  * **Bahía 3:** Vacía.
-  * **Bahía 4:** Bandeja ciega de relleno (Drive Blank Filler).
-* **Puertos y Panel Frontal:**
-  * 2 puertos frontales USB 2.0 (compatibles con teclado/mouse USB).
-  * LEDs de estado: LED de encendido (Verde continuo), LED de salud del chasis (Verde continuo, confirmando salud operativa 100%), LED de actividad de red.
-  * Botón de encendido frontal (Power/Standby con apagado forzado de 5 segundos).
-* **Puertos de Red (NIC):** Dos puertos Gigabit integrados HP NC107i (Broadcom BCM5723):
-  * **Puerto 1 / Mgmt (inferior):** Puerto Ethernet primario para PXE Netboot, enlace Gigabit con la laptop (192.168.137.1) y gestión.
-  * **Puerto 2 (superior):** Puerto Ethernet secundario.
-* **Video y Pantalla:** Chip gráfico Matrox G200 integrado con salida VGA trasera estándar.
-* **Unidad Óptica:** Lector interno frontal DVD/CD SATA/IDE con bandeja motorizada (`hp DVDROM DH40N`).
-
-## 4. Hallazgos y Resultados de las Pruebas Físicas (Noviembre 2026)
-
-* **Diagnóstico de Video VGA a HDMI y Pérdida de Sincronismo:**
-  * Se conectó un adaptador activo VGA a HDMI hacia una pantalla/TV HDMI LG.
-  * El conversor activo requiere alimentación auxiliar de 5V micro-USB para energizar el circuito analógico-digital. Al energizarlo, la pantalla proyecta nítidamente el logo gráfico inicial de HP ProLiant.
-  * Durante la transición del logo gráfico (640×480) hacia el modo texto (720×400 / Option ROMs), el puerto VGA reinicia momentáneamente la señal de sincronismo, causando que algunos convertidores pierdan el bloqueo de reloj y la TV muestre *"No hay señal"*.
-* **Diagnóstico Acústico de Beeps de POST:**
-  * **2 beeps cortos:** Ocurrieron al encender el servidor con las charolas de discos SAS extraídas hacia afuera. La controladora Smart Array P410 detectó la ausencia del arreglo (`1785-Slot X Drive Array - Drive(s) Not Detected`) y detuvo el POST esperando confirmación interactiva (`Press <F1> to continue, <F2> to configure`).
-  * **1 beep corto:** Al volver a insertar los discos SAS en sus bahías y encender el servidor, sonó un único beep corto, el cual corresponde al código estándar de éxito de POST y transferencia de control hacia el dispositivo de arranque.
-* **Intervención y Validación de Teclado y Setup de BIOS:**
-  * Se confirmó la disponibilidad de teclado USB para la interacción directa con el firmware.
-  * Tecla de acceso confirmada al BIOS Setup: **`F10`** (o `Supr` / Delete).
-  * Firmware detectado: **AMI BIOS v02.61, ROMID 021, Fecha de Revisión 01/18/2011**.
-  * Detección de Procesador: Intel(R) Xeon(R) CPU E5504 @ 2.00GHz (1 CPU físico, 4 de 4 cores lógicos habilitados).
-  * Detección de Memoria: **`System Memory Size: 8192MB` (8 GB)** limpios y estables tras aislar los dos módulos nuevos VLP Micron/IBM 4 GB DDR3 ECC Registered en las ranuras primarias blancas `DIMM2A` y `DIMM4B`.
-  * Dirección MAC integrada: **`44-1E-A1-6E-D2-E4`** (HP NC107i Gigabit / Broadcom MBA v11.0.8).
-* **Despliegue y Conclusión Exitosa de AlmaLinux 9 vía Vía B (inst.stage2 Oficial):**
-  * La instalación desatendida se ejecutó mediante arquitectura de red en dos fases con `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os` y `inst.ks=http://192.168.137.1:8000/ks.cfg`.
-  * Parámetros de pantalla optimizados: `nomodeset inst.text console=tty0 console=ttyS0,115200n8`, erradicando el parámetro obsoleto `vga=normal` que provocaba excepciones de CPU.
-  * Se transfirieron más de 1.4 GB de paquetes RPM base a velocidades de entre 23 y 31 MB/s a través del enlace Gigabit de la laptop (`192.168.137.1`).
-  * Anaconda completó el particionado de los discos SAS 15K RPM (`/dev/sda`), instaló el cargador GRUB en el MBR, ejecutó la configuración `%post` de SSH y sincronizador `chronyd`, y ejecutó el reinicio autónomo hacia el disco SAS local.
-## 5. Telemetría y Estado Operativo en Vivo de AlmaLinux 9 (Noviembre 2026)
-
-Tras el reinicio del servidor y la cesión de control al almacenamiento SAS local, la conexión SSH administrativa (`ssh root@192.168.137.50`) quedó plenamente operativa. La telemetría en vivo auditada por el agente reporta:
-
-* **Sistema Operativo y Kernel:** `AlmaLinux release 9.9 (Chartreuse Bobcat)` con kernel Linux `5.14.0-741.27.1.el9_9.x86_64`.
-* **Procesador Físico:** Intel Xeon E5504 @ 2.00 GHz, 4 núcleos físicos (0-3), 1 zócalo poblado, SSE4.2, 4 MB L3 caché, nodo NUMA 0.
-* **Memoria RAM Real:** 7.5 GiB utilizables en DDR3 Registered ECC Micron (`PC3-10600R`). Consumo base en reposo de solo 509 MiB (7.0 GiB libres para inferencia y cómputo) y Swap de 7.9 GiB.
-* **Almacenamiento SAS Real (`lsblk` / `df -h`):**
-  * `/dev/sda1` (1.0 GB XFS): Montado en `/boot`.
-  * `/dev/sda2` (7.9 GB SWAP): Partición de intercambio activa.
-  * `/dev/sda3` (70.0 GB XFS): Partición raíz `/` (2.1 GB usados, 68 GB disponibles).
-  * `/dev/sda5` (340.3 GB XFS): Partición `/home` para datasets y binarios.
-* **Red Gigabit e Internet:**
-  * Interfaz del SO: `enp4s0` con dirección IPv4 estática `192.168.137.50/24`.
-  * Conectividad WAN: Confirmada mediante resolución HTTP/2 hacia `repo.almalinux.org` vía nodo CDN en Querétaro.
-* **Sincronización Horaria (NTP):**
-  * Servicio `chronyd` activo y sincronizado.
-  * Zona horaria: `America/Mexico_City (CST, -0600)`.
-  * La hora del RTC y del reloj del sistema ha quedado corregida automáticamente, neutralizando el desfase de fábrica de 2011.
-* **Hoja de Ruta de Expansión y Cargas de Trabajo:** Véase [hardware-upgrades-and-crypto-orchestration.md](../concepts/hardware-upgrades-and-crypto-orchestration.md) para detalles sobre actualización a doble socket Xeon 5600, disipador HP `513944-001`, memorias RDIMM, viabilidad de GPU 75W, compilación de `llama.cpp` (SSE4.2) y orquestación DeNet Storage / Cripto.
-* **Topología de Red y Autonomía 24/7:** Véase [dual-wan-and-repeater-network-topology.md](../systems/dual-wan-and-repeater-network-topology.md) para detalles del desacoplamiento de la laptop mediante repetidor AC1200, IP aliasing y estrategia multi-proveedor (Megacable Fibra + EniNetworks WISP).
-
-
-================================================================================
-# FILE: wiki/entities/windows-laptop-node.md
-================================================================================
-
----
-type: entity
-title: "Nodo Workstation: Laptop Windows 11"
-description: "Estación de trabajo principal para desarrollo agéntico con Antigravity IDE, Ollama y consola de control"
-tags: [workstation, windows11, antigravity-ide, ollama, wsl2]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Nodo Workstation: Laptop Windows 11 (`windows-laptop-node`)
-
-## 1. Identificación y Rol
-
-* **Sistema Operativo:** Windows 11 Pro con subsistema WSL 2 (Ubuntu 20.04 LTS).
-* **Entorno de Desarrollo:** Antigravity IDE (agente AI integrado con servidores MCP y LLM Wiki).
-* **Motor de Inferencia Local:** Ollama Desktop para modelos locales de asistencia (`qwen3:8b-8k`, `gemma4`).
-* **Propósito:** Estación de trabajo para el programador. Proporciona los periféricos físicos (pantalla, teclado y ratón) para administrar el servidor HP ProLiant a través de la red local.
-
-## 2. Conectividad con el Servidor
-
-* Conexión vía WiFi hacia el punto de acceso / repetidor compartido con el servidor.
-* Sesiones de terminal OpenSSH y visualización del panel web de Cockpit en navegador.
-* Gestión de repositorios en GitHub mediante `gh` CLI y flujos CI/CD.
-
-
-================================================================================
-# FILE: wiki/entities/thunderobot-laptop-node.md
-================================================================================
-
----
-type: entity
-title: "Nodo de Trabajo: Laptop THUNDEROBOT ZERO (Windows 11 Pro)"
-description: "Estación de trabajo y control con Intel Core i9-13900HX, 32 GB DDR5, NVIDIA RTX 4060 8GB y enlace Gigabit directo al servidor HP"
-tags: [laptop, thunderobot-zero, rtx-4060, i9-13900hx, windows11, cuda, hybrid-ai]
-created: 2026-11-26
-updated: 2026-11-26
----
-
-# Nodo de Trabajo: Laptop THUNDEROBOT ZERO (`laptop-node`)
-
-## 1. Identificación y Rol Arquitectónico
-* **Identificador de Nodo:** `laptop-node` / `THUNDEROBOT-ZERO`.
-* **Sistema Operativo:** Microsoft Windows 11 Pro (64-bit, Build 26200).
-* **Rol en el Ecosistema:** Estación principal de desarrollo, interfaz gráfica de usuario (Next.js Dashboard, Cockpit), orquestación de agentes IA (Antigravity IDE) y aceleración por GPU (CUDA / Tensor Cores) para inferencia rápida y generación de embeddings.
-* **Topología de Red:** Puerta de enlace (`192.168.137.1`) que provee conexión a Internet compartida (ICS) y enlace Gigabit directo por cable Ethernet hacia el servidor HP ProLiant ML150 G6 (`192.168.137.50`).
-
----
-
-## 2. Especificaciones de Hardware Auditadas en Vivo (PowerShell / CIM)
-
-### A. Procesador (CPU)
-* **Modelo:** 13th Gen Intel Core i9-13900HX (Raptor Lake).
-* **Topología de Núcleos:** 24 núcleos físicos / 32 procesadores lógicos:
-  * 8 Performance-cores (P-cores) con Hyper-Threading (hasta 5.40 GHz Turbo).
-  * 16 Efficient-cores (E-cores) para tareas en segundo plano.
-* **Caché L3:** 36 MB Intel Smart Cache.
-* **Conjunto de Instrucciones:** AVX, AVX2, FMA3, BMI2, SSE4.2, Intel DL Boost (VNNI) para aceleración de inferencia en CPU.
-
-### B. Memoria RAM
-* **Capacidad Total:** 32 GB (34,359,738,368 bytes / 33.28 GB visibles).
-* **Configuración:** 2 ranuras SODIMM pobladas en Dual-Channel:
-  * Ranura 1: 16 GB Samsung DDR5-5600 MT/s (`M425R2GA3BB0-CWMOD`).
-  * Ranura 2: 16 GB Samsung DDR5-5600 MT/s (`M425R2GA3BB0-CWMOD`).
-* **Memoria Libre en Auditoría:** ~7.28 GB libres físicos en reposo de desarrollo.
-
-### C. Subsistema Gráfico (GPU Dual)
-1. **GPU Integrada (Bajo Consumo):**
-   * Intel UHD Graphics (Raptor Lake-S Mobile Graphics Controller).
-   * 1 GB RAM asignada, encargada de la pantalla principal y reproducción multimedia ligera.
-2. **GPU Dedicada (Aceleración IA / CUDA):**
-   * **Modelo:** NVIDIA GeForce RTX 4060 Laptop GPU.
-   * **Arquitectura:** Ada Lovelace (4 nm TSMC).
-   * **VRAM Dedicada:** 8 GB GDDR6 (8,188 MiB total, ~7,956 MiB libres para modelos).
-   * **Capacidad de Cómputo (Compute Capability):** **8.9** (Tensor Cores de 4ª generación, núcleos RT de 3ª generación, soporte nativo FP8, FP16, INT8, INT4).
-   * **Controlador NVIDIA:** Versión 562.24 (Driver 32.0.16.2124), compatible con CUDA 12.x.
-   * **Temperatura en Reposo:** ~45.8 °C con consumo base de 15.0W.
-
-### D. Almacenamiento
-* **Unidad Física:** SSD NVMe M.2 de 1 TB (`KPEGYMTBW2U001TCJD`), Bus PCIe NVMe, estado Healthy.
-* **Partición C: (NTFS):** 1,022 GB de capacidad total, ~23.2 GB libres (requiere políticas de retención con `rclone` hacia Google Drive de 5 TiB).
-
-### E. Conectividad y Redes
-* **Ethernet Primario (Enlace Servidor):** Realtek PCIe GbE Family Controller (`74:D4:DD:44:D8:80`) operando a **1 Gbps Full Duplex** hacia el servidor HP (`192.168.137.1` -> `192.168.137.50`).
-* **Wi-Fi WAN:** Intel Wi-Fi 6 AX201 160MHz (`F0:20:FF:14:BC:16`).
-* **Virtualización:** Hyper-V activado (`HypervisorPresent: True`), WSL2 operativo con Ubuntu 20.04.
-
----
-
-## 3. Scripts Estándar de PowerShell para Auditoría en Windows 11
-
-Para reproducir esta telemetría en cualquier momento sin herramientas de terceros:
-
-```powershell
-# 1. CPU y Núcleos
-Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed, L3CacheSize | Format-List
-
-# 2. GPU NVIDIA (CUDA / VRAM / Drivers)
-nvidia-smi --query-gpu=name,memory.total,memory.free,driver_version,compute_cap,power.draw,temperature.gpu --format=csv,noheader,nounits
-
-# 3. Módulos de Memoria Física
-Get-CimInstance Win32_PhysicalMemory | Select-Object DeviceLocator, Capacity, Speed, Manufacturer, PartNumber | Format-Table -AutoSize
-
-# 4. Salud de Discos y Espacio Libre
-Get-PhysicalDisk | Select-Object DeviceId, FriendlyName, MediaType, Size, BusType, HealthStatus | Format-Table -AutoSize
-Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID, FileSystem, Size, FreeSpace, Description | Format-Table -AutoSize
-
-# 5. Adaptadores de Red y Velocidad de Enlace
-Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed, MacAddress | Format-Table -AutoSize
-```
-
-
-================================================================================
-# FILE: wiki/systems/nextjs-dashboard.md
-================================================================================
-
----
-type: system
-title: "Frontend Next.js en GitHub Pages"
-description: "Panel de control estático con autenticación en cliente para monitoreo de telemetría y estado de servidores"
-tags: [nextjs, react, tailwindcss, typescript, github-pages, ssg]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Frontend Next.js en GitHub Pages (`dashboard`)
-
-## 1. Arquitectura de Exportación Estática
-
-La aplicación está construida sobre **Next.js 14+** con App Router y configurada con `output: 'export'`. Esto permite que el sitio se compile a un conjunto de ficheros HTML, JS y CSS listos para ser servidos por la infraestructura CDN de GitHub Pages sin costo.
-
-## 2. Componentes Clave
-
-1. **`AuthGuard.tsx`**: Componente de orden superior que intercepta la navegación. Comprueba la validez del token JWT almacenado en `sessionStorage`; si expira o no existe, redirige de inmediato a `/login`.
-2. **`ServerMetrics.tsx`**: Representación gráfica y métricas en tiempo real de porcentaje de CPU por hilo, memoria RAM ocupada, swap, temperatura y latencia de red.
-3. **`AiStatus.tsx`**: Monitor del motor de inferencia local. Indica el modelo activo, velocidad de procesamiento en tokens por segundo (tok/s) y latencia al primer token (TTFT).
-4. **`MiningStatus.tsx`**: Panel de telemetría de XMRig con hashrate instantáneo (H/s), hilos asignados, shares validados y estado del semáforo de gobernanza de recursos.
-5. **`lib/crypto.ts`**: Utilidad criptográfica cliente que calcula el resumen SHA-256 o PBKDF2 de la contraseña antes de su transmisión a la API.
-
-## 3. Parámetros de Configuración (`next.config.mjs`)
-- `basePath`: `'/xeon-nexus-sentinel'`
-- `trailingSlash`: `true`
-- `images`: `{ unoptimized: true }`
-
-
-================================================================================
-# FILE: wiki/systems/cloud-relay-api.md
-================================================================================
-
----
-type: system
-title: "Cloud Relay API en Python (FastAPI)"
-description: "Microservicio REST intermediario para ingesta y distribución de telemetría en nubes SaaS gratuitas"
-tags: [fastapi, python, cloud-relay, koyeb, zeabur, render, jwt]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Cloud Relay API en Python (`cloud-relay`)
-
-## 1. Propósito de la Capa de Intermediación
-
-Debido a que el servidor HP ProLiant se encuentra tras una conexión de banda ancha residencial (NAT de doble capa o Carrier-Grade NAT sin IP pública fija) y el frontend se ejecuta como archivos estáticos en GitHub Pages, el **Cloud Relay** actúa como puente público seguro de baja latencia.
-
-## 2. Endpoints Expuestos
-
-| Método | Ruta | Autenticación | Función |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/telemetry` | Encabezado `X-Server-Token` | Recibe payload JSON del daemon en AlmaLinux y lo almacena en RAM circular |
-| `GET` | `/api/telemetry/latest` | `Bearer <JWT_TOKEN>` | Devuelve la instantánea más reciente de métricas al frontend |
-| `GET` | `/api/telemetry/history` | `Bearer <JWT_TOKEN>` | Devuelve una serie temporal con las últimas 100 muestras |
-| `POST` | `/api/auth/login` | Público (Body JSON) | Valida usuario y contraseña cifrada emitiendo un JWT firmado |
-| `GET` | `/api/health` | Público | Comprobación de estado para keep-alive y monitorización de uptime |
-
-## 3. Aislamiento y Memoria Volátil
-
-- El servicio mantiene un buffer circular `deque(maxlen=100)` en memoria volátil de Python.
-- No utiliza bases de datos externas como PostgreSQL o Redis, garantizando un consumo de RAM inferior a 70 MB y adaptándose al nivel gratuito de Koyeb, Zeabur o Render.
-
-
-================================================================================
-# FILE: wiki/systems/almalinux-daemon.md
-================================================================================
-
----
-type: system
-title: "Daemon de Telemetría en AlmaLinux 9"
-description: "Servicio en segundo plano para recolección de métricas de CPU, RAM, temperatura, IA y minería en AlmaLinux 9"
-tags: [almalinux, daemon, python, telemetria, systemd]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Daemon de Telemetría en AlmaLinux 9 (`xeon-sentinel`)
-
-## 1. Responsabilidad y Funcionamiento
-
-El daemon de telemetría reside en el servidor HP ProLiant ML150 G6 operando sobre **AlmaLinux 9 Minimal**. Su propósito es inspeccionar el estado del hardware, los procesos de inferencia local (`llama.cpp` o Ollama) y el minero XMRig (RandomX), empaquetando periódicamente un objeto JSON que se despacha vía HTTP POST al Cloud Relay.
-
-## 2. Métricas Recolectadas
-
-1. **CPU y Frecuencia:** Lectura diferencial de `/proc/stat` y `/proc/cpuinfo` calculando el porcentaje de uso por núcleo e integral.
-2. **Memoria y NUMA:** Lectura de `/proc/meminfo` (MemTotal, MemFree, Buffers, Cached) y desglose de páginas locales vs remotas vía `numastat`.
-3. **Sensores Térmicos:** Extracción mediante `sysfs` (`/sys/class/thermal/` o `coretemp`) o comando IPMI BMC.
-4. **Estado de IA Local:** Sonda HTTP hacia el endpoint `/api/tags` o `/api/ps` de Ollama / `llama.cpp` server para medir modelos cargados y tiempos de generación.
-5. **Estado de Criptominería:** Consulta al endpoint HTTP local de XMRig (`http://127.0.0.1:18088/1/summary`) extrayendo hashrate a 10s, 60s, 15m y temperatura de encapsulado.
-
-## 3. Configuración y Ejecución
-
-- **Archivo de Configuración:** `server/daemon/config.yaml`
-- **Servicio Systemd:** `server/systemd/xeon-sentinel.service`
-- **Cadencia de Publicación:** Cada 5 segundos en condiciones normales, con reintentos exponenciales ante fallos de red.
-
-
-================================================================================
-# FILE: wiki/systems/dual-wan-and-repeater-network-topology.md
-================================================================================
-
----
-type: system
-title: "Topología de Red Autónoma: Repetidor AC1200, IP Aliasing y Estrategia Multi-ISP"
-description: "Arquitectura de desacoplamiento de la laptop para operación 24/7 del servidor HP mediante repetidor WiFi, direccionamiento IP múltiple y aprovechamiento de Megacable (Fibra) y EniNetworks (WISP)"
-tags: [networking, repeater-bridge, ip-aliasing, dual-wan, megacable, eninetworks, headless-24-7, depin-multi-ip]
-created: 2026-11-26
-updated: 2026-11-26
----
-
-# Topología de Red Autónoma: Repetidor AC1200, IP Aliasing y Estrategia Multi-ISP
-
-## 1. El Desafío: Desacoplamiento de la Estación de Trabajo
-* **Situación Inicial:** El servidor HP ProLiant ML150 G6 se encontraba conectado directamente al puerto Ethernet de la laptop mediante Conexión Compartida a Internet (ICS) en Windows (`192.168.137.1` -> `192.168.137.50`).
-* **Limitación Operativa:** La laptop es una estación móvil de trabajo que no puede permanecer conectada por cable de forma permanente. Apagarla, reiniciarla o trasladarla desconectaba al servidor de Internet e interrumpía los servicios desatendidos.
-* **Objetivo de Infraestructura:** Otorgar al servidor HP ProLiant conectividad de red y salida a Internet **100% autónoma 24/7**, accesible desde cualquier punto de la casa por WiFi sin necesidad de cables hacia la laptop.
-
----
-
-## 2. Topología Física con Repetidor WiFi Dual-Band AC1200
-
-El repetidor AC1200 dispone de radio dual (2.4 GHz y 5 GHz hasta 867 Mbps) y **2 puertos LAN Ethernet RJ-45 (10/100 Mbps)**:
-
-```text
-[ Módem Megacable (Fibra Óptica) ]
-         │
-         │  (Enlace WiFi 5 GHz)
-         ▼
-[ Repetidor AC1200 en Modo Puente / Extender ] (Junto al servidor)
-         ├── Puerto LAN 1 (RJ45) ──► HP ProLiant Puerto Inferior (enp4s0) -> AlmaLinux 9
-         └── Puerto LAN 2 (RJ45) ──► HP ProLiant Puerto Superior (iLO 100i) -> Gestión Hardware
-```
-
-### Protocolo de Despliegue Físico:
-1. **Ubicación:** Enchufe eléctrico inmediato al chasis HP ProLiant ML150 G6.
-2. **Vinculación Inalámbrica:** El repetidor se asocia por WiFi en la banda de **5 GHz** al módem de **Megacable** para garantizar mínima latencia y máxima tasa de transferencia sin saturación del espectro de 2.4 GHz.
-3. **Conexiones Cableadas Cortas:**
-   * **Puerto LAN 1 del Repetidor:** Conectado al puerto inferior Gigabit (`enp4s0`, controlador Broadcom BCM5723) del servidor. Cursa el tráfico de producción de AlmaLinux 9 (SSH, DeNet Storage, DePIN y APIs).
-   * **Puerto LAN 2 del Repetidor:** Conectado al puerto superior Fast Ethernet (`iLO 100i Mgmt`) del servidor. Permite gestión remota fuera de banda (encendido, apagado, ciclos de energía y consola BIOS remota) a través de la red local.
-4. **Acceso Inalámbrico desde la Laptop:** La laptop se conecta normalmente a la red WiFi del hogar y accede al servidor por SSH (`ssh root@<IP_Megacable>`) con total movilidad.
-
----
-
-## 3. Direccionamiento IP y Gestión Multi-IP en AlmaLinux 9
-
-Para mantener la compatibilidad con el entorno de laboratorio actual y permitir reconectar el cable directo de la laptop cuando se requiera máxima velocidad (1 Gbps) para inferencia de IA distribuida, se implementa una estrategia de **IP Aliasing (Múltiples IPs en la misma tarjeta física)**:
-
-### A. Estructura de Direcciones en `enp4s0`:
-1. **IP Primaria (Dinámica o Estática en LAN de Megacable):**
-   * Asignada por el servidor DHCP del módem/repetidor (ej. `192.168.1.150/24` o `192.168.0.150/24`).
-   * Configurada con la puerta de enlace predeterminada (*Default Gateway*) hacia Internet.
-   * Utilizada para navegación, actualizaciones, DeNet Storage, DePIN y SSH general desde la casa.
-2. **IP Secundaria Fija (Laboratorio de IA y Scripts):**
-   * Configurada estáticamente como alias: `192.168.137.50/24`.
-   * **Sin Gateway**, para evitar conflictos de enrutamiento con la salida principal a Internet.
-   * Permite que si en algún momento se conecta el cable de la laptop directamente al servidor, la comunicación funcione de inmediato sin modificar scripts ni configuraciones.
-
-### B. Comando de Configuración en AlmaLinux 9 (`nmcli`):
-```bash
-# Agregar la IP secundaria fija manteniendo la primaria del módem
-nmcli connection modify enp4s0 +ipv4.addresses 192.168.137.50/24
-nmcli connection up enp4s0
-```
-
----
-
-## 4. Opciones de Expansión Hardware (Dual-NIC Físico)
-
-En caso de requerir aislamiento físico estricto de redes o conexión cableada simultánea a dos módems:
-* **Slot PCIe Libre:** Instalar una tarjeta PCIe x1 Gigabit Ethernet (controlador Intel 82574L o Realtek RTL8111, costo aprox. 150 a 250 pesos MXN).
-* **Adaptador USB-Ethernet:** Adaptador USB a Gigabit Ethernet conectado en los puertos traseros.
-* **Separación de Tráfico:**
-  * **NIC 1 (`enp4s0` Integrada):** Conectada 24/7 al repetidor/módem para tráfico público y DePIN.
-  * **NIC 2 (PCIe / USB Nueva):** Enlace privado punto a punto de 1 Gbps reservado para la laptop (`192.168.137.50`) para inferencia RPC con `llama.cpp`.
-
----
-
-## 5. Estrategia Multi-ISP: Megacable (Fibra) vs. EniNetworks (Antena WISP)
-
-La disponibilidad de dos conexiones a Internet independientes y activas 24/7 bajo tecnologías físicas distintas ofrece una ventaja competitiva excepcional para la arquitectura:
-
-| Parámetro | Conexión A: Megacable | Conexión B: EniNetworks |
-| :--- | :--- | :--- |
-| **Medio de Acceso** | Fibra Óptica (FTTH) | Inalámbrico de Microondas (Antena en Techo / WISP) |
-| **Perfil de Tráfico** | Ancho de banda elevado (100–500+ Mbps), latencia ultra-baja (<10 ms), estabilidad frente a tormentas | Ancho de banda moderado, latencia 20–60 ms sensible al clima |
-| **Dirección IP Pública** | Pool residencial / dinámico de Megacable | Pool de direcciones IP públicas de EniNetworks |
-| **Rol Óptimo en el Ecosistema** | **Tráfico Crítico y Almacenamiento:**<br>• Nodo **DeNet Storage** (traslado veloz de fragmentos de datos)<br>• Acceso administrativo SSH, Cockpit y API Cloud Relay<br>• Descarga de modelos y paquetes RPM | **Monetización DePIN y Redundancia:**<br>• Nodo **Grass Network** (aprovecha una segunda IP pública residencial)<br>• **Failover de Respaldo:** Salida de emergencia si la fibra física sufre corte exterior<br>• Bots de scraping y monitoreo blockchain distribuido |
-
-### Caso de Uso de Doble Monetización Residencial (Grass Network):
-Las redes de compartición de ancho de banda descentralizado (DePIN) recompensan nodos según su dirección IP pública única:
-* Colocar la laptop en la red de Megacable y el servidor en la de EniNetworks (o viceversa mediante dos interfaces de red) permite operar **dos nodos residenciales genuinos simultáneos**, duplicando la acumulación de recompensas de forma legítima sin incurrir en penalizaciones por duplicidad de IP.
-
-
-================================================================================
-# FILE: wiki/systems/headless-pxe-netboot.md
-================================================================================
-
----
-title: "Arquitectura de Despliegue Headless PXE Netboot para HP ProLiant ML150 G6"
-description: "Servidor PXE/TFTP/HTTP autonomo en Python para instalacion desatendida de AlmaLinux 9 en servidores sin monitor ni teclado."
-category: "systems"
-date: "2026-11-23"
-status: "active"
-tags: ["pxe", "netboot", "tftp", "http", "ipxe", "kickstart", "almalinux9", "headless"]
----
-
-# Arquitectura de Despliegue Headless PXE Netboot
-
-## 1. Contexto y Desafio Tecnico
-El servidor **HP ProLiant ML150 G6** es un nodo de computo empresarial:
-- Controlador de almacenamiento interno: HP Smart Array P410 / SAS-SATA con discos configurados.
-- Sistema operativo preexistente en disco: **Windows Server 2008 R2 Enterprise**.
-- Prioridad de arranque del BIOS: Da preferencia al disco duro interno sobre el arranque por red PXE.
-- Sin monitor ni teclado USB externo conectado directamente al servidor (pantalla verificada por HDMI en TV mediante conversor VGA a HDMI con alimentacion USB).
-- Medios disponibles en laptop: Grabadora externa USB **PHILIPS CDRW/DVD SCB5265 (Unidad E:)** y discos virgenes **CD-R (700 MB)**.
-
-## 2. Estrategia de Arranque Hibrido: CD-R iPXE + Red Gigabit (PXE/HTTP)
-Dado que la imagen oficial `AlmaLinux-9-boot.iso` pesa 1.55 GB y excede la capacidad fisica de un CD-R (700 MB maximo, requiere DVD):
-1. Se emplea **iPXE ISO (`ipxe.iso`, ~9 MB)** grabada en el CD-R.
-2. El BIOS del HP ProLiant ML150 G6 prioriza de fabrica la unidad lectora frontal DVD/CD sobre los discos duros internos.
-3. El CD-R arranca iPXE en menos de 2 segundos sin requerir intervencion de teclado.
-4. iPXE se comunica por el puerto inferior Gigabit (`1/Mgmt`) con el servidor autonomo en la laptop (`192.168.137.1:8000`).
-5. Descarga `vmlinuz` (14.62 MB) e `initrd.img` (218.16 MB) por HTTP a 1 Gbps e inicia la instalacion desatendida via Kickstart (`ks.cfg`).
-
-```text
-[ Laptop Windows 11 ] (Gateway: 192.168.137.1)
-  │  ├── Conexión Compartida (ICS): Enruta tráfico de Wi-Fi hacia Ethernet
-  │  ├── Servidor HTTP (Puerto 8000): Sirve boot.ipxe, ks.cfg, vmlinuz e initrd.img
-  │  ├── Servidor TFTP (Puerto 69): Sirve undionly.kpxe (iPXE)
-  │  └── Servidor DHCP/ProxyDHCP (Puerto 67): Responde con opciones PXE dinámicas
-  │
-  ▼ (Cable Ethernet Gigabit - 1 Gbps)
-[ HP ProLiant ML150 G6 ] (Puerto Inferior 1/Mgmt - NC107i Gigabit)
-  1. BIOS PXE ROM solicita IP -> Recibe 192.168.137.50 y next-server=undionly.kpxe
-  2. TFTP descarga undionly.kpxe en ~150 ms
-  3. iPXE arranca -> Solicita DHCP con Opción 175
-  4. DHCP detecta iPXE -> Entrega URL http://192.168.137.1:8000/boot.ipxe
-  5. iPXE descarga vmlinuz (~15 MB) e initrd.img (~228 MB) por HTTP a 1 Gbps (~2-3 seg)
-  6. Anaconda inicia en modo texto desatendido leyendo ks.cfg
-  7. Instalación automatizada completa de AlmaLinux 9 y reinicio con OpenSSH activo
-```
-
-## 3. Resolucion del Bucle Infinito de iPXE
-Para evitar que el cliente iPXE descargue cíclicamente su propio binario en entornos headless, el servidor DHCP implementa discriminación por cabeceras RFC 2132 / RFC 3925:
-- **Cliente BIOS Estándar (Sin Opción 175):** Se le entrega `undionly.kpxe` vía TFTP.
-- **Cliente iPXE (Con Opción 175 o User-Class 'iPXE'):** Se le entrega la directiva HTTP directa `http://192.168.137.1:8000/boot.ipxe`.
-
-## 4. Parametros Kickstart (ks.cfg) para Operacion Headless
-- Modo texto estricto (`text`, `skipx`).
-- Aceptación automática de licencia (`eula --agreed`).
-- Particionamiento automático MBR/BIOS (`bootloader --location=mbr`, `clearpart --all --initlabel`, `autopart --type=plain`).
-- Red por DHCP en enlace activo (`network --bootproto=dhcp --device=link --activate --onboot=yes`).
-- Contraseña de root preconfigurada (`rootpw --plaintext nexusadmin2026!`).
-- SSH habilitado automáticamente (`services --enabled="sshd"`).
-- Reinicio automático al terminar (`reboot`).
-
-## 5. Pruebas de Diagnóstico y Resultados de Campo con el Servidor (Noviembre 2026)
-
-Durante las sesiones de laboratorio y pruebas en vivo con el HP ProLiant ML150 G6 se ejecutaron y validaron los siguientes componentes:
-
-### 5.1 Diagnóstico de Video y Descubrimiento del Estado del Servidor
-- **Prueba:** Conexión del puerto VGA trasero hacia TV mediante adaptador activo VGA a HDMI.
-- **Resultado:** El convertidor activo requería alimentación externa de 5V micro-USB para energizar el circuito analógico-digital. Al energizarlo por USB, la señal de video apareció de forma inmediata.
-- **Hallazgo:** La pantalla reveló que el servidor tiene preinstalado **Windows Server 2008 R2 Enterprise** en un arreglo SAS RAID administrado por la controladora **HP Smart Array P410**.
-
-### 5.2 Pruebas de Red y Sondeo DHCP/ICS
-- **Entorno:** Conexión compartida a Internet (ICS) en Windows 11 sobre el segmento `192.168.137.0/24` (laptop como Gateway en `192.168.137.1`).
-- **Scripts de Diagnóstico con Timeouts Estrictos (Mandato 6):**
-  - `scripts/scan-ics-range.ps1`: Escaneo paralelo de direcciones IP en la subred ICS.
-  - `scripts/detect-ilo.ps1`: Sondeo de puertos HTTP (80) y HTTPS (443) para identificar la interfaz HP iLO 100i con timeout de 2 segundos por nodo.
-  - `scripts/monitor-hp-ip.ps1`: Monitoreo continuo de solicitudes ARP y asignaciones de IP para el servidor.
-  - `scripts/check-dhcp-leases.ps1`: Inspección de concesiones de red emitidas por ICS.
-  - `scripts/sniff-broadcasts.ps1` y `scripts/sniff-ports.ps1`: Captura no bloqueante de tramas DHCP UDP 67/68 y TFTP UDP 69.
-- **Conclusión de Red:** El servidor físico no realizaba broadcast DHCP PXE durante el encendido debido a que la secuencia de arranque del BIOS priorizaba el disco duro interno Smart Array P410.
-
-### 5.3 Implementación y Verificación del Servidor PXE Autónomo
-- **Componente:** `scripts/headless_pxe_server.py` implementado en Python estándar sin dependencias externas pesadas.
-- **Servicios Integrados:**
-  - Servidor DHCP/ProxyDHCP en puerto UDP 67.
-  - Servidor TFTP en puerto UDP 69 sirviendo `undionly.kpxe`.
-  - Servidor HTTP en puerto TCP 8000 sirviendo `boot.ipxe`, `ks.cfg`, `vmlinuz` (14.62 MB) e `initrd.img` (218.16 MB).
-- **Control de Bucle:** Discriminación de Opción 175 verificada para entrega directa del script de arranque HTTP al detectar clientes iPXE.
-- **Lanzador Rápido:** Creación de `iniciar-servidor-pxe.bat` para ejecución en Windows 11 con elevación de privilegios de red.
-
-### 5.4 Grabación Desatendida de iPXE en CD-R
-- **Desafío:** Imposibilidad de grabar el ISO completo de AlmaLinux 9 (1.55 GB) en un CD-R virgen (700 MB) y ausencia de teclado físico USB conectado al servidor para cambiar el orden de arranque en el BIOS.
-- **Solución:** Grabación de la imagen ultraligera `ipxe.iso` (9 MB) en CD-R.
-- **Herramienta:** Creación de `scripts/burn-iso.ps1`, automatizando `C:\Windows\System32\isoburn.exe /Q E: C:\Users\lenin\pxeboot\ipxe.iso` sobre la unidad óptica externa PHILIPS CDRW/DVD SCB5265 (Unidad E:).
-- **Resultado:** Grabación de pistas finalizada exitosamente con código de salida 0, lista para ser leída por la lectora frontal del servidor y conectar por Gigabit al servidor PXE de la laptop.
-
-### 5.5 Diagnóstico de Beeps del BIOS, Arreglo SAS y Validación de Hardware
-- **Comportamiento con Discos Extraídos (2 Beeps Cortos):**
-  - Al extraer las dos charolas de discos SAS frontales hacia afuera para evitar el inicio de Windows Server, la controladora Smart Array P410 emitió 2 beeps cortos y pausó el POST en la advertencia `1785-Slot X Drive Array - Drive(s) Not Detected (Press F1 to continue)`.
-  - Sin confirmación, el servidor se mantuvo esperando en pausa preventiva.
-- **Comportamiento con Discos Reinsertados (1 Beep Corto):**
-  - Al reinsertar y bloquear las dos charolas de discos SAS (450 GB 15K RPM HP Spare 517352-001) y reiniciar, el servidor emitió un único beep corto (POST exitoso y saludable).
-  - El BIOS reconoció 8192 MB (8 GB) limpios en las ranuras primarias blancas `DIMM2A` y `DIMM4B` con módulos Micron/IBM DDR3 ECC Registered.
-
-### 5.6 Configuración del BIOS Setup y Bloqueo Definitivo de Windows
-- **Acceso a Setup de Firmware:** Entrada interactiva confirmada con tecla **`F10`** (o `Supr` / Delete).
-- **Parámetros Validados:**
-  - Placa Base: HP ProLiant ML150 G6, ROMID 021, ROM Revision 01/18/2011.
-  - Procesador: Intel Xeon E5504 @ 2.00GHz (1 procesador físico, 4 cores).
-  - Red Onboard: MAC `44:1E:A1:6E:D2:E4` (HP NC107i / Broadcom MBA v11.0.8).
-  - Prioridad de Arranque USB: `USB Device Boot Priority: [High]`.
-- **Orden de Arranque Establecido (Pestaña Boot):**
-  - `1st Boot Device:` **`[CD/DVD]`**
-  - `2nd Boot Device:` **`[Network:MBA v11.0.]`**
-  - `3rd Boot Device:` **`[Disabled]`** (📌 Deshabilitación total de `[Hard Drive]`).
-- **Efecto de Bloqueo:** El sistema preexistente Windows Server 2008 R2 Enterprise (dominio gubernamental `gppan.senado.gob.mx\administrador`) queda 100% inhabilitado para arrancar.
-- **Estado de Halt y Señal de Vídeo:** Al fallar la lectura del CD y agotarse los intentos de PXE, el BIOS ejecuta un ciclo de Halt / Boot Failure. La controladora gráfica Matrox G200e desconecta la sincronización VGA analógica, provocando que el conversor activo muestre en la TV LG el mensaje de **"Sin señal"**.
-
-### 5.7 Refactorización del Servidor PXE Autónomo (Subnet Directed Broadcast)
-- **Diagnóstico del Fallo de Negociación DHCP:**
-  - En Windows 11 con múltiples interfaces activas (Wi-Fi + Ethernet Realtek + adaptadores virtuales VMware/WSL), los paquetes dirigidos a la dirección de difusión universal `255.255.255.255:68` son enrutados por el kernel hacia la interfaz con la ruta predeterminada (Wi-Fi), impidiendo que el cliente en el enlace directo Ethernet reciba el `DHCPOFFER`.
-  - La inclusión de la Opción DHCP 60 (`PXEClient`) en el puerto 67 instruye al cliente PXE a ignorar el `bootfile` y buscar un ProxyDHCP externo en el puerto 4011.
-- **Correcciones Implementadas en `headless_pxe_server.py`:**
-  1. **Subnet Directed Broadcast:** Se transmite tanto a `192.168.137.255:68` como a `255.255.255.255:68`, garantizando la salida física del paquete por la NIC Ethernet local.
-  2. **Depuración de Opción 60:** Eliminación de la Opción 60 en las respuestas del puerto 67, permitiendo que la ROM Broadcom MBA v11.0 tome el `bootfile` (`undionly.kpxe`) y la IP TFTP (`192.168.137.1`) de forma directa y unificada.
-  3. **Multi-Socket Binding:** Enlace concurrente en `192.168.137.1:67/4011/69` y `0.0.0.0:67/4011/69` con hilos dedicados para TFTP y HTTP.
-
-### 5.8 Resolución de Error SSL por Reloj de BIOS y Despliegue de BaseOS
-- **Incidente de Certificados No Válidos (`curl: (60) SSL certificate problem`):**
-  - Al iniciar el ramdisk Anaconda y cargar `dracut-initqueue`, la descarga de la imagen del instalador (`stage2`) falló repetidamente contra `https://repo.almalinux.org/...`.
-  - Causa Raíz: El reloj en tiempo real (RTC) del servidor HP se encontraba en `Tue 01/18/2011` debido a la pila de BIOS agotada. Para las herramientas criptográficas modernas en 2011, los certificados SSL/TLS emitidos en 2025/2026 figuran con fecha futura (`certificate is not yet valid`).
-- **Remediación en Tiempo Real en `boot.ipxe` y `ks.cfg`:**
-  - Redirección del origen de paquetes a protocolo HTTP plano: `http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os/`.
-  - Incorporación de parámetros de bypass de verificación en la línea de comando del kernel y Kickstart: `inst.noverifyssl` y `--noverifyssl`.
-- **Resultado del Despliegue en Vivo:**
-  - Descarga exitosa de `vmlinuz` (14 MB), `initrd.img` (218 MB), `boot.ipxe` y `ks.cfg` por HTTP local en el puerto 8000.
-  - Activación del framebuffer de consola Matrox G200e (`mgag200drmfb`) en resolución de 128×48 caracteres.
-  - Transferencia ininterrumpida de más de 1.4 GB de paquetes RPM base mediante la conexión compartida ICS de la laptop a velocidades de ~12 MB/s, procediendo al particionado desatendido del arreglo Smart Array P410 (`/dev/sda`).
-
-### 5.9 Despacho de Arranque Multi-Opción con Fallback a Disco SAS (`sanboot 0x80`)
-- **Desafío:** Pérdida recurrente de configuración en NVRAM del BIOS (batería CR2032 agotada) que revierte el equipo a los valores de fábrica de 2011, provocando bucles si el usuario no interviene en menos de 1 segundo en el menú BBS.
-- **Solución iPXE:** Transformación de `boot.ipxe` en un menú selectivo con timeout de 3 segundos:
-  - Opción por defecto: `sanboot --no-describe --drive 0x80` (ejecuta INT 13h directo sobre el MBR de la controladora Smart Array P410).
-  - Opciones secundarias: Modo Rescate de Linux por red (`inst.rescue`) y Reinstalación desatendida Kickstart (`:reinstall`).
-- **Resguardo y Versionado Oficial:** Copia de respaldo en `boot.ipxe.installer-backup` e incorporación de toda la suite de arranque (`headless_pxe_server.py`, `ks.cfg`, `boot.ipxe`) dentro del repositorio rastreado por Git en `server/pxe/` (Commit `39d8342`).
-
-### 5.10 Vía B: Arquitectura de Red de Dos Fases (inst.stage2) y Mitigación de Triple Fault
-- **Diagnóstico del Reinicio Temprano (Triple Fault en Modo Real BIOS):**
-  - Durante las pruebas con los 8 GB RDIMM Micron estabilizados, la transferencia por red de `vmlinuz` (15 MB) e `initrd.img` (228 MB) culminó en exactamente 5 segundos a 1 Gbps (243 MB entregados).
-  - Sin embargo, a los 35-45 segundos el servidor experimentó un reinicio automático de hardware.
-  - Causa Raíz 1: En los kernels modernos de RHEL 9 / AlmaLinux 9 (Linux 5.14+), el parámetro heredado de 16 bits `vga=normal` se encuentra completamente deprecado; al intentar invocar la llamada de selector de vídeo de BIOS en modo real, el kernel falla y dispara una excepción de CPU.
-  - Causa Raíz 2: La BIOS AMI 2011 opera en modo real de 16-bit al despachar llamadas iPXE/UNDI; la descompresión en memoria contigua de un ramdisk de 228 MB (que en memoria alcanza 700+ MB) colisiona con el área EBDA y buffers de la Smart Array P410.
-- **Implementación de la Vía B (Arranque Desatendido 100% Red Oficial):**
-  - **Parámetro Obligatorio `inst.stage2`:** Se sustituye `inst.repo` por `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os`, permitiendo a Dracut montar dinámicamente el entorno de Anaconda por streaming HTTP sin saturar la memoria baja.
-  - **Depuración de Parámetros de Pantalla:** Se purga `vga=normal` y se fija `nomodeset inst.text console=tty0 console=ttyS0,115200n8`, estabilizando el conversor VGA a HDMI de la GPU Matrox MGA G200e.
-  - **Alineación de Kickstart:** `selinux --permissive` y sincronización con `chronyd` para desacoplar el arranque del desfase temporal de la pila de litio agotada.
-## 6. Culminación Exitosa del Ciclo de Despliegue y Arranque SAS
-
-La arquitectura en dos fases (Vía B con `inst.stage2` oficial) resolvió de forma definitiva el límite de ramdisk de 228 MB en Legacy BIOS:
-1. **Fase de Instalación:** Anaconda completó el particionado de discos SAS de 15,000 RPM, descargó 1.4 GB de paquetes RPM base por Gigabit y configuró OpenSSH y NTP antes del reinicio.
-2. **Fase de Producción:** Con la opción predeterminada `local_sas` (`sanboot --no-describe --drive 0x80`) en `boot.ipxe`, el servidor arranca de forma autónoma desde el almacenamiento SAS local.
-3. **Acceso Operativo:** Puerto SSH 22 disponible en `192.168.137.50` con credencial `root` / `nexusadmin2026!`.
-
-
-================================================================================
-# FILE: wiki/concepts/hybrid-ai-and-crypto-synergy.md
+# FILE: wiki/concepts/cpu-inference-tuning.md
 ================================================================================
 
 ---
 type: concept
-title: "Arquitectura Híbrida: Laptop NVIDIA RTX 4060 + Servidor HP ProLiant 24/7"
-description: "Sinergia distribuida de cómputo entre la estación de trabajo Windows 11 con GPU Ada Lovelace y el servidor AlmaLinux 9 headless para IA y Criptomonedas"
-tags: [hybrid-architecture, rtx-4060, xeon-e5504, distributed-ai, llama-rpc, depin, crypto-orchestrator, denet-storage]
-created: 2026-11-26
-updated: 2026-11-26
+title: "Afinamiento de Inferencia de IA en CPU Xeon Legada"
+description: "Estrategias de cuantización y compilación para inferencia de LLM en procesadores Intel Xeon sin soporte AVX2"
+tags: [ia, llm, llama-cpp, cuantizacion, sse4-2, xeon, cpu]
+created: 2026-11-22
+updated: 2026-11-22
 ---
 
-# Arquitectura Híbrida: Laptop NVIDIA RTX 4060 + Servidor HP ProLiant 24/7
+# Afinamiento de Inferencia de IA en CPU Xeon Legada
 
-## 1. Fundamento de la Sinergia Híbrida
-El ecosistema combina dos perfiles de hardware complementarios unidos por un **enlace físico Gigabit directo de 1 Gbps con latencia sub-milisegundo (< 0.3 ms)**:
-1. **La Laptop (THUNDEROBOT ZERO):** Computador de alta potencia interactiva con Intel Core i9-13900HX (24C/32T, 36MB L3), 32 GB DDR5 y GPU dedicada **NVIDIA GeForce RTX 4060 (8 GB VRAM GDDR6, Compute 8.9)**.
-2. **El Servidor (HP ProLiant ML150 G6):** Nodo de infraestructura empresarial continuo con Intel Xeon E5504, 8 GB DDR3 ECC Registered, controlador Smart Array P410 y discos SAS de 15,000 RPM en RAID (340 GB libres en `/home`).
+## 1. Desafío Arquitectónico: Ausencia de AVX2
 
-```text
-[ LAPTOP THUNDEROBOT ZERO ] (192.168.137.1)
-  ├── CPU: i9-13900HX (24C / 32T, AVX2, VNNI)
-  ├── RAM: 32 GB DDR5-5600 MT/s
-  └── GPU: NVIDIA RTX 4060 (8 GB GDDR6 Ada Lovelace)
-         │
-         │  ◄── Enlace Ethernet Gigabit 1 Gbps (Latencia < 0.3 ms) ──►
-         ▼
-[ SERVIDOR HP PROLIANT ML150 G6 ] (192.168.137.50)
-  ├── CPU: Intel Xeon E5504 (Nehalem, SSE4.2)
-  ├── RAM: 8 GB DDR3 ECC Micron RDIMM
-  └── SAS: Smart Array P410 (RAID SAS 15K RPM, 340 GB /home)
-```
+Los procesadores Intel Xeon de la generación Nehalem y Westmere (LGA1366) carecen de los conjuntos de instrucciones vectoriales AVX y AVX2. Su límite vectorial se encuentra en **SSE4.2**. La mayoría de binarios precompilados modernos de PyTorch, TensorFlow o `llama.cpp` fallan con error de instrucción ilegal (`Illegal instruction (core dumped)`) si se ejecutan directamente.
 
----
+## 2. Soluciones y Reglas de Optimización
 
-## 2. Sinergia en Inteligencia Artificial (IA Híbrida Distribuida)
-
-### A. Reparto de Roles y Tareas de IA
-| Carga de Trabajo | Nodo Óptimo | Justificación Técnica |
-| :--- | :--- | :--- |
-| **Generación Interactiva Rápida (50–90 tok/s)** | **Laptop (RTX 4060 GPU)** | Los Tensor Cores de 4ª generación en Ada Lovelace procesan modelos 7B–8B (Llama-3.1-8B, Qwen2.5-7B) en Q4_K_M o FP8 a velocidades interactivas instantáneas. |
-| **Generación de Embeddings Vectoriales** | **Laptop (RTX 4060 GPU)** | La GPU procesa lotes masivos de texto a alta velocidad usando modelos como `bge-m3` o `nomic-embed-text`. |
-| **Base de Datos Vectorial y RAG Continuo** | **Servidor HP (AlmaLinux 9)** | Aloja la base de datos vectorial (Qdrant, ChromaDB, PGvector) en `/home`. Permite que la base de conocimiento esté siempre en línea sin gastar memoria de la laptop. |
-| **Inferencia Distribuida (llama.cpp RPC)** | **Laptop (GPU) + Servidor (RAM)** | Para modelos de 14B a 32B que exceden los 8 GB de la GPU: la laptop ejecuta capas en VRAM y descarga el resto hacia la RAM del servidor vía `rpc-server`. |
-| **Agentes Autónomos y Scraping Nocturno** | **Servidor HP (Headless)** | Tareas programadas de análisis web, clasificación de archivos o resúmenes periódicos corren 24/7 en segundo plano sin drenar la batería de la laptop. |
-
-### B. Inferencia Distribuida con `llama.cpp` RPC
-1. **En el Servidor HP ProLiant (`192.168.137.50`):**
-   Se ejecuta el binario `rpc-server` en el puerto 50052, exponiendo los 7.0 GiB de RAM libres para hospedar tensores del modelo:
-   ```bash
-   /home/llama.cpp/build/bin/rpc-server -p 50052 -H 0.0.0.0
-   ```
-2. **En la Laptop (`192.168.137.1`):**
-   `llama-cli` o `llama-server` compila con aceleración CUDA completa y divide el modelo:
-   ```bash
-   llama-server -m models/Qwen2.5-14B-Instruct-Q4_K_M.gguf -ngl 24 --rpc 192.168.137.50:50052
-   ```
-   * Las primeras 24 capas se aceleran a máxima velocidad en la RTX 4060 (8 GB VRAM) y las capas restantes se computan en la RAM del servidor HP a través del enlace Gigabit.
-
----
-
-## 3. Sinergia en Criptomonedas, DePIN y Almacenamiento Descentralizado
-
-### A. Reparto de Responsabilidades Cripto
-* **Laptop (Estación de Operación Segura e Interfaz):**
-  * Gestión de claves privadas, billeteras frías/calientes (Metamask, Rabby), interfaces de usuario Web3 y dashboards de monitoreo.
-  * No apta para tareas 24/7 (el desgaste de ventiladores, consumo térmico y el espacio libre limitado en el SSD NVMe de ~23 GB desaconsejan alojar nodos masivos).
-* **Servidor HP ProLiant (Worker Desatendido 24/7):**
-  * Hardware empresarial diseñado para operar 365 días al año sin descanso.
-  * Los discos SAS mecánicos de 15,000 RPM soportan ciclos continuos de lectura/escritura sin degradación de celdas flash.
-
-### B. Despliegue de DeNet Storage y Almacenamiento Descentralizado
-* **Ventaja Crítica:** La laptop tiene solo ~23 GB libres en su NVMe, lo que imposibilita almacenar datos de terceros. El servidor dispone de **340 GB libres en `/home`**.
-* **Arquitectura:**
-  * Se asignan **200 GB a 250 GB** del arreglo SAS en el servidor HP para el nodo *Datakeeper* de **DeNet Storage** mediante un contenedor Docker.
-  * La laptop administra y monitorea el nodo a través de la red local, recibiendo las recompensas en su wallet sin ocupar espacio en su disco local.
-
-### C. Redes DePIN y Automatización de Nodos
-1. **Compartición de Ancho de Banda (Grass Network):** El servidor corre el nodo Docker de Grass 24/7 conectado al enlace ICS de la laptop o router, generando puntos continuos.
-2. **Bots de Trading y Arbitraje DeFi:** Scripts en Python en el servidor HP monitorizan pares de liquidez o ejecutan órdenes de compra/venta programadas las 24 horas del día.
-3. **Proxy RPC Privado:** El servidor cachea llamadas RPC hacia redes EVM y Solana, proporcionando a la laptop consultas instantáneas sin sufrir bloqueos por límites de peticiones (*rate-limits*) de proveedores públicos.
+1. **Compilación Nativa de `llama.cpp`:**
+   - La herramienta debe compilarse desde el código fuente desactivando AVX y activando SSE4.2:
+     `cmake -B build -DLLAMA_AVX=OFF -DLLAMA_AVX2=OFF -DLLAMA_FMA=OFF -DLLAMA_F16C=OFF`
+2. **Selección de Modelos Cuantizados:**
+   - Para CPUs con ancho de banda de memoria limitado (DDR3 ECC), los modelos óptimos son de 1B a 3B parámetros con cuantización agresiva `Q4_K_M` o `Q3_K_M`.
+   - Ejemplos recomendados: Llama-3.2-1B-Instruct, Qwen2.5-0.5B / 1.5B, SmolLM2-1.7B.
+3. **Mapeo en Memoria y Bloqueo de Paginación:**
+   - Se debe utilizar la bandera `--mlock` para impedir que el sistema operativo mueva los pesos del modelo al espacio de intercambio (swap) en disco.
+4. **Asignación de Hilos:**
+   - El número de hilos de cómputo (`-t`) debe coincidir exactamente con el número de núcleos físicos del socket asignado (excluyendo Hyper-Threading para evitar contención de caché L1/L2).
 
 
 ================================================================================
@@ -945,272 +321,144 @@ Solo las transferencias de datos masivas (como respaldos de gigabytes con `rclon
 
 
 ================================================================================
-# FILE: wiki/concepts/server-memory-and-bios-governance.md
+# FILE: wiki/concepts/hardware-upgrades-and-crypto-orchestration.md
 ================================================================================
 
 ---
 type: concept
-title: "Gobernanza de Memoria RAM, Arquitectura RDIMM/UDIMM y Configuración de Arranque en HP ProLiant ML150 G6"
-description: "Estándares de memoria DDR3 ECC, incompatibilidad entre RDIMM y UDIMM, configuración de BIOS AMI v02.61 y arranque con Smart Array P410"
-tags: [rdimm, udimm, ecc, hp-proliant, smart-array, bios, matrox-g200, memory-rules]
+title: "Guía de Expansión de Hardware, Despliegue de LLMs SSE4.2 y Orquestación Cripto"
+description: "Especificaciones de actualización a doble CPU Xeon, disipador HP, memorias RDIMM, viabilidad de GPU, compilación de llama.cpp para SSE4.2 y orquestación DePIN/Cripto en HP ProLiant ML150 G6"
+tags: [hardware, xeon-upgrade, heatsink, rdimm, gpu-viability, sse42, llama-cpp, denet-storage, crypto-orchestrator, depin]
 created: 2026-11-26
 updated: 2026-11-26
 ---
 
-# Gobernanza de Memoria RAM, Arquitectura RDIMM/UDIMM y Configuración de Arranque en HP ProLiant ML150 G6
+# Guía de Expansión de Hardware, Despliegue de LLMs SSE4.2 y Orquestación Cripto
 
-Este documento compendia las reglas de arquitectura de hardware, directivas de población de memoria RAM DDR3 ECC y procedimientos de configuración de arranque (BIOS y Option ROM de controladora RAID) para el nodo servidor HP ProLiant ML150 G6 con procesadores Intel Xeon serie 5500 (Nehalem-EP).
-
----
-
-## 1. Arquitectura de Memoria del Servidor (Intel Nehalem-EP / Xeon 5500)
-
-El procesador Intel Xeon E5504 integra su propio controlador de memoria (IMC - Integrated Memory Controller) con arquitectura de **Triple Canal (Triple-Channel)** DDR3 a 800/1066/1333 MHz.
-
-### Comparativa Tecnológica: RDIMM vs UDIMM
-
-| Parámetro | RDIMM (Registered DIMM / terminación "R") | UDIMM (Unbuffered DIMM / terminación "E") |
-| :--- | :--- | :--- |
-| **Identificador Estándar** | `PC3-10600R`, `PC3-8500R` | `PC3-10600E`, `PC3-8500E` |
-| **Componente Clave** | Chip de registro de hardware (RCD - Registering Clock Driver) que amortigua señales de comando y dirección. | Conexión eléctrica directa entre las líneas del bus del IMC y cada chip DRAM. |
-| **Carga Eléctrica en CPU** | Muy baja; el procesador solo maneja la carga del registro, no de los chips individuales. | Elevada; la capacitancia y carga eléctrica se multiplican por cada chip DRAM insertado. |
-| **Capacidad Máxima (ML150 G6)** | Hasta **48 GB** (Xeon 5500) o hasta **96 GB / 192 GB** (Xeon 5600) poblando los 12 zócalos. | Limitada a un máximo de **24 GB** en todo el servidor (máximo 2 zócalos por canal). |
-| **Estabilidad y Tolerancia 24/7** | Misión crítica empresarial, reduce jitter y ruido eléctrico en el bus. | Estaciones de trabajo de entrada o microservidores de bajo consumo. |
-| **Paradoja de Precios de Mercado** | **Extremadamente económicas** en reventa (surplus de datacenters; no sirven en PCs comunes). | **Más costosas** (alta demanda por usuarios que reviven placas de escritorio y estaciones Z). |
+## 1. Política de Periféricos y Modo Headless
+* **Acceso y Operación Primaria:** El servidor opera en modo *headless* 100% autónomo. La interfaz de gestión primaria es OpenSSH (`ssh root@192.168.137.50`) a través del enlace Gigabit de 1 Gbps.
+* **Uso del Teclado Físico:** Conectar un teclado USB es posible para emergencias de consola local, pero **completamente innecesario en producción**.
+* **Impacto en el Arranque (POST):** Durante la inicialización del firmware AMI BIOS O21 (2011), la rutina `Auto-detecting USB Mass Storage Devices` interroga los puertos USB. Conectar teclados u otros periféricos en el arranque puede causar demoras de sondeo o pausas interactivas si la BIOS intenta registrarlos como dispositivos de almacenamiento masivo. Se recomienda mantener los puertos USB libres durante los reinicios normales.
 
 ---
 
-## 2. Incompatibilidad Absoluta y Regla de Coexistencia de Memoria
+## 2. Hoja de Ruta de Expansión de Procesadores y Disipador (Doble Zócalo LGA 1366)
 
-> [!CAUTION]
-> **REGLA ABSOLUTA DE HARDWARE (HP QuickSpecs & Intel Memory Reference Code):**
-> **ESTÁ TERMINANTEMENTE PROHIBIDO MEZCLAR MÓDULOS RDIMM CON UDIMM EN EL MISMO SISTEMA.**
-> 
-> 1. **Incompatibilidad a Nivel de Placa y Sistema:** La prohibición aplica no solo al mismo canal, sino a **toda la placa base**. 
-> 2. **Comportamiento en Dual Socket:** Si se instala un segundo procesador Xeon (CPU2), **NO es posible** colocar RDIMM en el CPU1 y UDIMM en el CPU2. El bus QPI (QuickPath Interconnect) y la inicialización de la BIOS exigen un único modo de temporización y búfer homogéneo.
-> 3. **Consecuencia de la Mezcla:** El código MRC (Memory Reference Code) de la BIOS se detiene en POST Fase 1, emite pitidos de error de memoria y bloquea la salida de vídeo (pantalla negra permanente).
+La placa base del HP ProLiant ML150 G6 (chipset Intel 5520/5500) cuenta con dos zócalos LGA 1366. El zócalo secundario (CPU 2) se encuentra actualmente desocupado bajo el protector plástico amarillo de fábrica (*CAUTION*).
 
----
+### A. Opciones de Procesadores Compatibles
+1. **Opción Económica (Paridad Absoluta):**
+   * Añadir un segundo **Intel Xeon E5504** idéntico al actual (Nehalem-EP, 45 nm, 2.00 GHz, 4 núcleos / 4 hilos, 4 MB caché L3, TDP 80W).
+   * Total: 8 núcleos físicos / 8 hilos, 8 MB caché L3 combinada.
+2. **Upgrade de Alto Rendimiento Recomendado (Westmere-EP, 32 nm):**
+   * Reemplazar por un par emparejado de **Intel Xeon X5670** (2.93 GHz, Turbo 3.33 GHz) o **Intel Xeon X5675** (3.06 GHz, Turbo 3.46 GHz).
+   * Características por procesador: 6 núcleos físicos / 12 hilos, **12 MB de caché L3**, TDP de 95W.
+   * Total del Servidor: **12 núcleos físicos / 24 hilos** y **24 MB de caché L3 total**.
+   * Beneficio: Duplica el rendimiento computacional, habilita 12 hilos de inferencia/cómputo y amplía el límite direccionable de RAM hasta 96 GB / 192 GB.
 
-## 3. Inventario de Módulos del Nodo y Diagnóstico de Adquisición
-
-### A. Módulos Adquiridos (Tecnología Correcta)
-* **Modelo:** Micron 4 GB `PC3-10600R` (`MT36JBZS51272PY-1G4D1`).
-* **Especificación:** DDR3-1333 Registered ECC con paridad, diseño de bajo perfil.
-* **Cantidad:** 2 módulos (8 GB totales).
-* **Veredicto:** Son las memorias óptimas de grado servidor. Estandarizan el equipo en arquitectura RDIMM.
-
-### B. Módulos Preexistentes (Heredados del Propietario Anterior)
-* **Módulos Azules:** 2 × Nanya 4 GB 2Rx8 `PC3-10600E-9-10-E0` (HP P/N: `500210-071` / Kit `500672-B21`).
-* **Módulo Verde:** 1 × Samsung 2 GB 2Rx8 `PC3-10600E-09-10-E1` (HP Spare: `501533-001` / Kit `500670-B21`).
-* **Tipo:** UDIMM Unbuffered ECC.
-* **Veredicto:** Piezas originales HP de catálogo que funcionaban solas sumando 10 GB, pero incompatibles con cualquier ampliación RDIMM.
-
-### C. Directiva de Expansión Futura
-Para ampliar la memoria del servidor a 16 GB, 24 GB o 48 GB:
-* Adquirir exclusivamente módulos **RDIMM** (`PC3-10600R` o `PC3-8500R`) de 4 GB u 8 GB (ej. Micron, Samsung o Hynix de servidor).
-* Descartar cualquier compra de módulos terminados en "E" (`10600E`).
+### B. Disipador Térmico para el Segundo Zócalo (CPU 2)
+* El segundo zócalo requiere el disipador pasivo diseñado específicamente para el chasis ML150 G6, que canaliza el flujo de aire de los ventiladores frontales:
+  * **HP Spare Part Number:** `513944-001`.
+  * **HP Option Kit:** `487109-B21`.
+  * **Características Físicas:** Base de cobre con aletas de aluminio y 4 tornillos de resorte cautivos con rosca LGA 1366. No se deben utilizar disipadores estándar de escritorio (LGA 115x o LGA 1366 con anclaje de plástico *push-pin*) debido a la distancia de perforación y presión del socket de servidor.
 
 ---
 
-## 4. Parámetros de BIOS AMI v02.61 para Arranque Fiable
+## 3. Gobernanza y Compatibilidad de Memorias RAM para Expansión
 
-Para evitar falsos bloqueos o fallos de arranque con la controladora **HP Smart Array P410** y discos SAS de 15,000 RPM:
+El servidor cuenta actualmente con **8 GB (2x 4 GB)** limpios en DDR3 Registered ECC Micron (`MT36JBZS51272PY-1G4D1`, `PC3-10600R`).
 
-| Parámetro en BIOS Setup | Valor Recomendado | Justificación Operativa |
-| :--- | :--- | :--- |
-| **`Quick Boot`** | **`[Disabled]`** | **Crítico:** Evita que la BIOS salte al bootloader antes de que la controladora Smart Array P410 termine de acelerar (spin-up) los discos SAS y registrar el volumen lógico. |
-| **`Quiet Boot`** | **`[Disabled]`** | Elimina el logo gráfico estático de HP y muestra en consola cruda todos los mensajes del POST, códigos de error y saltos de GRUB. |
-| **`1st Boot Device`** | **`[Hard Drive]`** | Destina el arranque al subsistema de almacenamiento principal. |
-| **`2nd Boot Device`** | **`[Disabled]`** | Previene re-arranques accidentales hacia Windows o interfaces de red cuando se desea operar localmente. |
-| **Submenú `Hard Disk Drives`** | **`1st Drive: [RAID:Smart Array P]`** | Designa la Option ROM de la controladora P410 como disco duro primario (BBS Priority). |
-
----
-
-## 5. Configuración de Boot Volume en Option ROM de Smart Array P410
-
-Si la BIOS no encuentra el sector de arranque de AlmaLinux 9 en `/dev/sda`:
-1. Durante el POST, observar la inicialización de la controladora:
-   ```text
-   HP Smart Array P410 Controller (256MB, vX.XX)
-   1 Logical Drive
-   Press <F8> to configure
-   ```
-2. Pulsar **`F8`** para ingresar a la utilidad ACU (Array Configuration Utility) embebida en ROM.
-3. Ingresar a **`Select Boot Volume`**.
-4. Marcar explícitamente el **`Logical Drive 1`** (419 GB SAS RAID) como disco de arranque primario.
-5. Guardar con **`F8`** y reiniciar.
+### Reglas Estrictas de Adquisición:
+1. **Tipo Obligatorio: DDR3 ECC Registered (RDIMM):**
+   * Módulos con sufijo **`R`**: **`PC3-10600R`** (1333 MHz) o **`PC3-8500R`** (1066 MHz), o variantes de bajo voltaje **`PC3L-10600R`** (1.35V retrocompatibles a 1.5V).
+   * Organización recomendada: **Dual Rank (`2Rx4` o `2Rx8`)**.
+2. **Prohibición Absoluta:**
+   * **PROHIBIDO:** Módulos Unbuffered ECC terminados en **`E`** (como `PC3-10600E` UDIMM) y módulos no-ECC de escritorio común.
+   * **PROHIBIDO:** Memorias de reducción de carga (**LRDIMM**, sufijo `L`).
+   * **PROHIBIDO:** Mezclar RDIMM y UDIMM en la misma placa base (el controlador MRC de Intel detendrá el arranque con fallo de memoria).
+3. **Población en Triple Canal:**
+   * Cada CPU gestiona 3 canales de memoria con 6 ranuras (3 blancas primarias `1A`, `2A`, `3A` y 3 negras secundarias `1B`, `2B`, `3B`).
+   * Para conservar el ancho de banda óptimo de 3 canales, adquirir módulos en múltiplos de **3 o 6 por procesador**:
+     * Con 1 CPU: 3x 4 GB (12 GB) o 6x 4 GB (24 GB) / 3x 8 GB (24 GB) o 6x 8 GB (48 GB).
+     * Con 2 CPUs: 6x 4 GB (24 GB) o 12x 4 GB (48 GB) / 12x 8 GB (96 GB).
 
 ---
 
-## 6. Diagnóstico de Pantalla "Sin Señal" (Matrox G200e + Conversor VGA-HDMI)
+## 4. Viabilidad y Restricciones de Tarjetas Gráficas (GPU)
 
-La aparición recurrente del mensaje *"Sin señal"* en el monitor o televisor HDMI responde a dos factores físicos:
-1. **Pausa por Detección de Cambio de RAM:** Tras retirar módulos y variar la capacidad (de 10 GB a 8 GB), la BIOS detiene el arranque con el mensaje `Memory size has changed. Press F1 to continue`. Si el monitor aún no sincroniza, la máquina parece apagada pero está esperando la tecla `F1`.
-2. **Desincronización de Reloj en el Conversor VGA-HDMI:** El chip gráfico integrado **Matrox G200e** altera su frecuencia analógica al pasar del modo texto BIOS (720×400 @ 70Hz) al framebuffer del kernel Linux (`mgag200`). Los convertidores pasivos o activos de bajo costo pierden el enganche de fase y el monitor se apaga.
-   * **Mitigación:** Esperar 60-90 segundos a que concluya el arranque del sistema operativo y acceder remotamente por red (SSH / Cockpit) o reconectar el cable de alimentación auxiliar USB del conversor.
+Es técnicamente viable incorporar una tarjeta gráfica para aceleración de inferencia o vídeo, sujeta a cuatro factores limitantes del chasis:
 
+1. **Fuente de Poder Delta 460W:** Entrega un máximo combinado de 385W en el riel de +12V y **carece por completo de conectores auxiliares de alimentación PCIe (6 u 8 pines)**.
+2. **Límite de Consumo del Bus PCIe:** La ranura PCIe 2.0 x16 entrega un máximo de **75W**. Toda GPU debe ser alimentada exclusivamente por la ranura.
+3. **Espacio Físico y Deflector de Aire:** El deflector plástico azul (*air baffle*) limita la longitud y grosor de las tarjetas; se prefieren modelos de ranura simple (*single-slot*) o perfil bajo.
+4. **Firmware BIOS Legacy:** La BIOS AMI de 2011 no cuenta con UEFI moderno, lo que puede provocar que GPUs recientes (RTX serie 4000 o AMD RX 6000/7000) no den vídeo ni permitan el POST.
 
-================================================================================
-# FILE: wiki/concepts/randomx-cache-isolation.md
-================================================================================
-
----
-type: concept
-title: "Aislamiento de Recursos y Caché L3 en Minería RandomX"
-description: "Fórmula de dimensionamiento de hilos para RandomX basada en 2 MB de caché L3 y gobernanza contra la inferencia de IA"
-tags: [randomx, xmrig, cache-l3, numa, mineria, cpu, xeon]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Aislamiento de Recursos y Caché L3 en Minería RandomX
-
-## 1. La Regla de Oro de RandomX (2 MB L3 por Hilo)
-
-El algoritmo RandomX utilizado por Monero está diseñado para resistir ASICs mediante el uso intensivo de la memoria caché de nivel 3 (L3 Cache) y accesos de memoria aleatorios con alta sensibilidad a la latencia.
-
-Cada hilo de minería en RandomX requiere estrictamente **2 MB de memoria caché L3**.
-
-### Cálculo de Hilos Máximos
-
-Para dimensionar los hilos de XMRig sin saturar el procesador:
-
-`Hilos Máximos = Piso(Caché L3 Total en MB / 2)`
-
-Por ejemplo:
-- Intel Xeon E5520 (8 MB Caché L3): Hilos Máximos = 8 / 2 = 4 hilos.
-- Intel Xeon X5670 (12 MB Caché L3): Hilos Máximos = 12 / 2 = 6 hilos.
-
-Si se configuran más hilos de los permitidos por la caché física, los hilos excedentes deben acceder a la memoria RAM DDR3 para buscar los datos de Scratchpad, multiplicando la latencia por un factor de 10× y provocando una caída catastrófica del hashrate global.
-
-## 2. Competencia de Memoria: IA vs Minería
-
-Tanto la inferencia de modelos de lenguaje en CPU como la minería RandomX saturan por completo los canales de memoria del bus IMC. Ejecutar ambas tareas en paralelo degrada el rendimiento de la IA a menos de 1 token por segundo y reduce el hashrate en más del 70%.
-
-### Algoritmo del Gobernador (`ai-miner-governor.sh`)
-
-1. El script vigila la presencia de peticiones de inferencia activas en el puerto de Ollama / `llama.cpp`.
-2. Al detectar inferencia en curso:
-   - Envía comando HTTP `POST /1/pause` al minero XMRig.
-   - Libera el 100% del ancho de banda del bus de memoria y núcleos para el modelo de IA.
-3. Al concluir la generación del texto:
-   - Envía comando HTTP `POST /1/resume` al minero.
-   - Restablece la minería de fondo.
-
-
-================================================================================
-# FILE: wiki/concepts/cpu-inference-tuning.md
-================================================================================
-
----
-type: concept
-title: "Afinamiento de Inferencia de IA en CPU Xeon Legada"
-description: "Estrategias de cuantización y compilación para inferencia de LLM en procesadores Intel Xeon sin soporte AVX2"
-tags: [ia, llm, llama-cpp, cuantizacion, sse4-2, xeon, cpu]
-created: 2026-11-22
-updated: 2026-11-22
----
-
-# Afinamiento de Inferencia de IA en CPU Xeon Legada
-
-## 1. Desafío Arquitectónico: Ausencia de AVX2
-
-Los procesadores Intel Xeon de la generación Nehalem y Westmere (LGA1366) carecen de los conjuntos de instrucciones vectoriales AVX y AVX2. Su límite vectorial se encuentra en **SSE4.2**. La mayoría de binarios precompilados modernos de PyTorch, TensorFlow o `llama.cpp` fallan con error de instrucción ilegal (`Illegal instruction (core dumped)`) si se ejecutan directamente.
-
-## 2. Soluciones y Reglas de Optimización
-
-1. **Compilación Nativa de `llama.cpp`:**
-   - La herramienta debe compilarse desde el código fuente desactivando AVX y activando SSE4.2:
-     `cmake -B build -DLLAMA_AVX=OFF -DLLAMA_AVX2=OFF -DLLAMA_FMA=OFF -DLLAMA_F16C=OFF`
-2. **Selección de Modelos Cuantizados:**
-   - Para CPUs con ancho de banda de memoria limitado (DDR3 ECC), los modelos óptimos son de 1B a 3B parámetros con cuantización agresiva `Q4_K_M` o `Q3_K_M`.
-   - Ejemplos recomendados: Llama-3.2-1B-Instruct, Qwen2.5-0.5B / 1.5B, SmolLM2-1.7B.
-3. **Mapeo en Memoria y Bloqueo de Paginación:**
-   - Se debe utilizar la bandera `--mlock` para impedir que el sistema operativo mueva los pesos del modelo al espacio de intercambio (swap) en disco.
-4. **Asignación de Hilos:**
-   - El número de hilos de cómputo (`-t`) debe coincidir exactamente con el número de núcleos físicos del socket asignado (excluyendo Hyper-Threading para evitar contención de caché L1/L2).
-
-
-================================================================================
-# FILE: wiki/concepts/storage-optimization-and-gdrive-backup.md
-================================================================================
-
----
-title: "Optimización de Almacenamiento Local y Respaldo en Google Drive con Rclone"
-type: "concept"
-category: "storage"
-tags: ["storage", "rclone", "gdrive", "backup", "windows11", "wsl", "disk-cleanup"]
-last_updated: "2026-11-22"
-status: "active"
----
-
-# Optimización de Almacenamiento Local y Respaldo en Google Drive con Rclone
-
-## 1. Visión General
-
-El entorno de desarrollo y operación de **Xeon Nexus Sentinel** requiere balancear el espacio en disco de la estación de control (Laptop Windows 11 con WSL2) con las necesidades de compilación, modelos locales de IA y telemetría.
-
-Para evitar saturación de la partición de sistema `C:`, se implementó una estrategia híbrida de dos niveles:
-1. **Limpieza interna periódica sin privilegios de administrador:** Eliminación de cachés de npm, pip, NuGet, temporales de usuario y artefactos de desarrollo (`node_modules` inactivos, `.next/cache`).
-2. **Respaldo y liberación de espacio en nube con `rclone`:** Conexión directa a Google Drive (cuenta de 5 TiB con 4.899 TiB disponibles) mediante binario portable en espacio de usuario (`C:\Users\lenin\rclone\rclone.exe`) y script de orquestación `scripts/gdrive-backup.ps1`.
+### Tarjetas Recomendadas (75W sin conectores auxiliares):
+* **Inferencia de IA Ligera / CUDA:**
+  * **NVIDIA Quadro P2000 (5 GB GDDR5):** Formato *single-slot* ultra-delgado, 75W, arquitectura Pascal, 5 GB de VRAM para descargar capas de modelos en GPU.
+  * **NVIDIA Quadro P1000 (4 GB GDDR5):** Formato bajo perfil, consumo de 47W, 4 GB de VRAM.
+  * **NVIDIA GeForce GTX 1650 (4 GB GDDR5/GDDR6):** Versión estándar de 75W sin conector PCIe de 6 pines.
+  * **NVIDIA GeForce GTX 1050 Ti (4 GB GDDR5):** 75W sin conector auxiliar.
+* **Transcodificación y Salida Básica:**
+  * **NVIDIA GeForce GT 1030 (2 GB GDDR5, 30W)** o **Quadro P620 / P400**.
 
 ---
 
-## 2. Métricas de Capacidad Verificadas
+## 5. Arquitectura de Despliegue de LLMs en CPU SSE4.2 (7.0 GiB Libres)
 
-- **Capacidad Total en Google Drive:** 5 TiB
-- **Espacio Libre en Nube:** 4.899 TiB
-- **Espacio Utilizado Actual:** 19.038 GiB
-- **Espacio Recuperado en Windows C:** +19.91 GB (de 8.94 GB a 28.85 GB libres)
-- **Espacio Reclamado en WSL2:** +33 GB (de 85 GB a 52 GB usados)
+### Limitación Vectorial de la CPU
+El procesador Intel Xeon E5504 cuenta con extensiones **SSE4.2**, pero **carece de instrucciones AVX y AVX2**. Por esta razón, los binarios precompilados genéricos (como la distribución binaria de Ollama o builds universales de llama.cpp) fallan inmediatamente con `Illegal instruction (core dumped)`.
 
----
+### Compilación Especializada de `llama.cpp` en AlmaLinux 9:
+```bash
+# 1. Herramientas base y dependencias
+dnf groupinstall -y "Development Tools"
+dnf install -y cmake git python3-pip
 
-## 3. Automatización: `scripts/gdrive-backup.ps1`
+# 2. Clonado en partición de datos (/home tiene 340 GB libres)
+cd /home
+git clone https://github.com/ggerganov/llama.cpp.git
+cd llama.cpp
 
-El script implementa tres operaciones principales con validación de integridad previa al borrado:
-
-| Acción | Modo Rclone | Comportamiento | Casos de Uso Recomendados |
-| :--- | :--- | :--- | :--- |
-| `Copy` | `rclone copy` | Duplica los archivos locales en la nube sin alterar el origen. | Respaldos preventivos de código, configuraciones y modelos. |
-| `Move` | `rclone move` | Transfiere a la nube y **elimina localmente sólo tras verificación SHA-1**. | Liberación de espacio en carpetas de Descargas, renders o videos. |
-| `Sync` | `rclone sync` | Mantiene el destino exactamente idéntico al origen. | Espejado unidireccional de directorios de trabajo. |
-
-### Parámetros Principales
-- `-SourcePath`: Ruta local de origen (ej: `C:\Users\lenin\Documents`).
-- `-RemotePath`: Directorio remoto en Google Drive (ej: `gdrive:Backup/Documents`).
-- `-BeforeDate`: Fecha de corte temporal (por defecto: `'2026-01-01'`).
-- `-CheckLastAccess`: Validación dual estricta. Exige que el archivo no haya sido modificado ni abierto/leído (`LastAccessTime`) después de la fecha de corte. Protege archivos antiguos que se siguen utilizando activamente (como canciones o documentos de consulta frecuente).
-- `-MinAgeDays`: Filtra únicamente archivos con más de N días de antigüedad (ej: `-MinAgeDays 60`).
-- `-DryRun`: Switch de simulación que lista las acciones sin realizar ningún cambio ni borrado.
-
----
-
-## 4. Regla de Inactividad Real (LastWriteTime vs LastAccessTime)
-
-En Windows 11 NTFS, la actualización de último acceso se encuentra habilitada (`DisableLastAccess = 2`). Una auditoría sobre 170,495 archivos reveló que 40,842 archivos modificados antes de 2026 (23.77 GB) fueron abiertos y utilizados durante 2026.
-Para evitar archivar o borrar archivos de consulta activa (como la música o referencias cotidianas), el sistema requiere la evaluación conjunta:
-`LastWriteTime < FechaCorte Y LastAccessTime < FechaCorte`.
-
----
-
-## 4. Ejemplos de Uso en PowerShell
-
-### Simulación preventiva (Dry-Run)
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\gdrive-backup.ps1 -SourcePath "C:\Users\lenin\Downloads" -MinAgeDays 60 -Action Move -DryRun
+# 3. Compilación limpia para SSE4.2 sin instrucciones vectoriales no soportadas
+cmake -B build -DLLAMA_AVX=OFF -DLLAMA_AVX2=OFF -DLLAMA_FMA=OFF -DLLAMA_F16C=OFF
+cmake --build build --config Release -j4
 ```
 
-### Liberación real de espacio para archivos con más de 60 días
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\gdrive-backup.ps1 -SourcePath "C:\Users\lenin\Downloads" -MinAgeDays 60 -Action Move
+### Modelos Óptimos con Cuantización Q4_K_M (Formato GGUF):
+Con **7.0 GiB libres en RAM** en AlmaLinux 9, los siguientes modelos caben íntegramente en memoria sin recurrir a disco:
+* **Llama-3.2-1B-Instruct** (~0.8 GB en Q4_K_M): Inferencia a ~18 tokens/s, ideal para clasificación y extracción de datos.
+* **Qwen2.5-1.5B-Instruct** (~1.1 GB en Q4_K_M): Excelente dominio en español y asistencia general.
+* **Llama-3.2-3B-Instruct** (~2.0 GB en Q4_K_M): Alta fidelidad conversacional y seguimiento de instrucciones.
+* **Qwen2.5-3B-Instruct** (~2.1 GB en Q4_K_M): Razonamiento y estructuración de salidas JSON.
+
+*Ejecución con bloqueo en memoria RAM (bloquea el paging a swap):*
+```bash
+./build/bin/llama-cli -m /home/modelos/Llama-3.2-3B-Instruct-Q4_K_M.gguf -p "Tu consulta aqui" -t 4 --mlock
 ```
 
-### Respaldo de proyectos o documentos sin borrar localmente
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\gdrive-backup.ps1 -SourcePath "C:\Users\lenin\Documents" -Action Copy
-```
+---
+
+## 6. Integración con DeNet Storage y Orquestación Cripto / DePIN
+
+El servidor HP ProLiant ML150 G6 es una plataforma ideal para orquestar servicios de infraestructura descentralizada 24/7 sin recurrir a minería intensiva de CPU:
+
+### A. DeNet Storage (Nodo Datakeeper)
+* **Requisitos:** Servidor Linux con alta disponibilidad de red y almacenamiento en disco.
+* **Asignación en el Servidor:** La partición `/home` dispone de **340 GB libres en XFS** respaldada por discos SAS de 15,000 RPM en arreglo RAID Smart Array P410.
+* **Implementación:** Asignar entre 150 GB y 250 GB de almacenamiento dedicado para el nodo DeNet (vía contenedor Docker o binario nativo), generando recompensas por provisión de espacio sin consumir CPU ni agotar la RAM.
+
+### B. Orquestador de Servicios y Nodos Cripto
+1. **Nodos Ligeros y Servidores Proxy RPC:**
+   * Servidor de balanceo y caché RPC local para redes EVM o servidor Electrum para Bitcoin.
+   * Permite que aplicaciones locales o bots consulten el estado de la blockchain con latencias mínimas sin sobrecargar recursos.
+2. **Bots de Automatización y Trading:**
+   * Ejecución ininterrumpida de bots en Python o Node.js para monitoreo de liquidez en DEXs, arbitraje o alertas de transferencias en contratos inteligentes.
+3. **Redes DePIN sin Colateral (Colocalización en Docker):**
+   * **Grass Network:** Compartición de ancho de banda residual en contenedor aislado.
+   * **Mysterium / Presearch:** Servicios de red descentralizados livianos.
+4. **Centro de Telemetría y Monitoreo:**
+   * Servidor de métricas central con Prometheus y Grafana para supervisar nodos externos, billeteras o granjas de cómputo, complementado con el daemon `xeon-sentinel` y Cockpit en el puerto 9090.
 
 
 ================================================================================
@@ -1357,6 +605,252 @@ Auto-detecting USB Mass Storage Devices ..
 
 
 ================================================================================
+# FILE: wiki/concepts/hybrid-ai-and-crypto-synergy.md
+================================================================================
+
+---
+type: concept
+title: "Arquitectura Híbrida: Laptop NVIDIA RTX 4060 + Servidor HP ProLiant 24/7"
+description: "Sinergia distribuida de cómputo entre la estación de trabajo Windows 11 con GPU Ada Lovelace y el servidor AlmaLinux 9 headless para IA y Criptomonedas"
+tags: [hybrid-architecture, rtx-4060, xeon-e5504, distributed-ai, llama-rpc, depin, crypto-orchestrator, denet-storage]
+created: 2026-11-26
+updated: 2026-11-26
+---
+
+# Arquitectura Híbrida: Laptop NVIDIA RTX 4060 + Servidor HP ProLiant 24/7
+
+## 1. Fundamento de la Sinergia Híbrida
+El ecosistema combina dos perfiles de hardware complementarios unidos por un **enlace físico Gigabit directo de 1 Gbps con latencia sub-milisegundo (< 0.3 ms)**:
+1. **La Laptop (THUNDEROBOT ZERO):** Computador de alta potencia interactiva con Intel Core i9-13900HX (24C/32T, 36MB L3), 32 GB DDR5 y GPU dedicada **NVIDIA GeForce RTX 4060 (8 GB VRAM GDDR6, Compute 8.9)**.
+2. **El Servidor (HP ProLiant ML150 G6):** Nodo de infraestructura empresarial continuo con Intel Xeon E5504, 8 GB DDR3 ECC Registered, controlador Smart Array P410 y discos SAS de 15,000 RPM en RAID (340 GB libres en `/home`).
+
+```text
+[ LAPTOP THUNDEROBOT ZERO ] (192.168.137.1)
+  ├── CPU: i9-13900HX (24C / 32T, AVX2, VNNI)
+  ├── RAM: 32 GB DDR5-5600 MT/s
+  └── GPU: NVIDIA RTX 4060 (8 GB GDDR6 Ada Lovelace)
+         │
+         │  ◄── Enlace Ethernet Gigabit 1 Gbps (Latencia < 0.3 ms) ──►
+         ▼
+[ SERVIDOR HP PROLIANT ML150 G6 ] (192.168.137.50)
+  ├── CPU: Intel Xeon E5504 (Nehalem, SSE4.2)
+  ├── RAM: 8 GB DDR3 ECC Micron RDIMM
+  └── SAS: Smart Array P410 (RAID SAS 15K RPM, 340 GB /home)
+```
+
+---
+
+## 2. Sinergia en Inteligencia Artificial (IA Híbrida Distribuida)
+
+### A. Reparto de Roles y Tareas de IA
+| Carga de Trabajo | Nodo Óptimo | Justificación Técnica |
+| :--- | :--- | :--- |
+| **Generación Interactiva Rápida (50–90 tok/s)** | **Laptop (RTX 4060 GPU)** | Los Tensor Cores de 4ª generación en Ada Lovelace procesan modelos 7B–8B (Llama-3.1-8B, Qwen2.5-7B) en Q4_K_M o FP8 a velocidades interactivas instantáneas. |
+| **Generación de Embeddings Vectoriales** | **Laptop (RTX 4060 GPU)** | La GPU procesa lotes masivos de texto a alta velocidad usando modelos como `bge-m3` o `nomic-embed-text`. |
+| **Base de Datos Vectorial y RAG Continuo** | **Servidor HP (AlmaLinux 9)** | Aloja la base de datos vectorial (Qdrant, ChromaDB, PGvector) en `/home`. Permite que la base de conocimiento esté siempre en línea sin gastar memoria de la laptop. |
+| **Inferencia Distribuida (llama.cpp RPC)** | **Laptop (GPU) + Servidor (RAM)** | Para modelos de 14B a 32B que exceden los 8 GB de la GPU: la laptop ejecuta capas en VRAM y descarga el resto hacia la RAM del servidor vía `rpc-server`. |
+| **Agentes Autónomos y Scraping Nocturno** | **Servidor HP (Headless)** | Tareas programadas de análisis web, clasificación de archivos o resúmenes periódicos corren 24/7 en segundo plano sin drenar la batería de la laptop. |
+
+### B. Inferencia Distribuida con `llama.cpp` RPC
+1. **En el Servidor HP ProLiant (`192.168.137.50`):**
+   Se ejecuta el binario `rpc-server` en el puerto 50052, exponiendo los 7.0 GiB de RAM libres para hospedar tensores del modelo:
+   ```bash
+   /home/llama.cpp/build/bin/rpc-server -p 50052 -H 0.0.0.0
+   ```
+2. **En la Laptop (`192.168.137.1`):**
+   `llama-cli` o `llama-server` compila con aceleración CUDA completa y divide el modelo:
+   ```bash
+   llama-server -m models/Qwen2.5-14B-Instruct-Q4_K_M.gguf -ngl 24 --rpc 192.168.137.50:50052
+   ```
+   * Las primeras 24 capas se aceleran a máxima velocidad en la RTX 4060 (8 GB VRAM) y las capas restantes se computan en la RAM del servidor HP a través del enlace Gigabit.
+
+---
+
+## 3. Sinergia en Criptomonedas, DePIN y Almacenamiento Descentralizado
+
+### A. Reparto de Responsabilidades Cripto
+* **Laptop (Estación de Operación Segura e Interfaz):**
+  * Gestión de claves privadas, billeteras frías/calientes (Metamask, Rabby), interfaces de usuario Web3 y dashboards de monitoreo.
+  * No apta para tareas 24/7 (el desgaste de ventiladores, consumo térmico y el espacio libre limitado en el SSD NVMe de ~23 GB desaconsejan alojar nodos masivos).
+* **Servidor HP ProLiant (Worker Desatendido 24/7):**
+  * Hardware empresarial diseñado para operar 365 días al año sin descanso.
+  * Los discos SAS mecánicos de 15,000 RPM soportan ciclos continuos de lectura/escritura sin degradación de celdas flash.
+
+### B. Despliegue de DeNet Storage y Almacenamiento Descentralizado
+* **Ventaja Crítica:** La laptop tiene solo ~23 GB libres en su NVMe, lo que imposibilita almacenar datos de terceros. El servidor dispone de **340 GB libres en `/home`**.
+* **Arquitectura:**
+  * Se asignan **200 GB a 250 GB** del arreglo SAS en el servidor HP para el nodo *Datakeeper* de **DeNet Storage** mediante un contenedor Docker.
+  * La laptop administra y monitorea el nodo a través de la red local, recibiendo las recompensas en su wallet sin ocupar espacio en su disco local.
+
+### C. Redes DePIN y Automatización de Nodos
+1. **Compartición de Ancho de Banda (Grass Network):** El servidor corre el nodo Docker de Grass 24/7 conectado al enlace ICS de la laptop o router, generando puntos continuos.
+2. **Bots de Trading y Arbitraje DeFi:** Scripts en Python en el servidor HP monitorizan pares de liquidez o ejecutan órdenes de compra/venta programadas las 24 horas del día.
+3. **Proxy RPC Privado:** El servidor cachea llamadas RPC hacia redes EVM y Solana, proporcionando a la laptop consultas instantáneas sin sufrir bloqueos por límites de peticiones (*rate-limits*) de proveedores públicos.
+
+
+================================================================================
+# FILE: wiki/concepts/local-vlm-hallucinations-and-autonomous-harness-limits.md
+================================================================================
+
+# Límites de Modelos VLM Locales (8B) y Riesgos en Harnesses Autónomos sin Supervisión
+
+---
+title: Límites de Modelos VLM Locales (8B) y Riesgos en Harnesses Autónomos sin Supervisión
+type: concept
+tags: [local-ai, vlm, computer-vision, hallucinations, autonomous-agents, harness]
+created: 2026-11-27
+updated: 2026-11-27
+status: stable
+---
+
+## 1. Resumen Ejecutivo
+
+La experimentación práctica en el stack de agente autónomo local (Vixl IDE + LiteLLM + Ollama + FastMCP) permitió evaluar de forma empírica la capacidad de un modelo de visión multimodal compacto (`qwen3-vl:8b-instruct`) frente a tareas de análisis de imágenes reales. Aunque la infraestructura de ejecución (STDIO JSON-RPC, proxy OpenAI y paso de herramientas) operó con éxito de extremo a extremo, los resultados evidenciaron una barrera fundamental de precisión: **la alucinación semántica de segundo orden en modelos de 8B**.
+
+Este documento analiza las limitaciones intrínsecas de los modelos locales compactos para tareas de visión, la necesidad de verificación humana continua (*Human-in-the-Loop*) y por qué un harness 100% local basado en modelos 8B no puede sustituir de forma autónoma y no supervisada a herramientas de frontera como Claude Code, GitHub Copilot o Antigravity IDE.
+
+---
+
+## 2. Caso de Estudio Empírico: Análisis del Logo de Microsoft Azure
+
+Durante la prueba de validación, se suministró al modelo el archivo de imagen oficial `C:\Users\lenin\Documents\Images\Logos\Microsoft_Azure.svg.png` solicitando:
+> *"Describe detalladamente el logo, incluyendo su forma, colores y cualquier texto visible."*
+
+### 2.1. Desempeño Sensorial (Detección de Bajo Nivel) — Aprobado
+El modelo procesó los tensores visuales con notable exactitud morfológica y cromática:
+* **Forma:** Identificó una letra "A" mayúscula estilizada, tridimensional, compuesta por paneles cruzados con sensación de capas superpuestas y esquinas redondeadas.
+* **Color:** Detectó con precisión milimétrica la paleta de azules, distinguiendo el azul marino profundo en la base izquierda y el azul cielo/cian brillante en la sección superior derecha.
+* **Texto:** Reconoció correctamente la ausencia de tipografía adicional en el isotipo.
+
+### 2.2. Fallo de Clasificación Semántica (Razonamiento de Alto Nivel) — Alucinación Crítica
+A pesar de la correcta extracción visual, el modelo concluyó categóricamente:
+> *"El logo que se muestra es el de Adobe... Este diseño es el logo principal de Adobe, utilizado ampliamente en su branding global para representar herramientas de diseño como Photoshop e Illustrator."*
+
+```text
+[ Imagen Real: Azure ] ──► [ Detección: Letra 'A' + Color Azul ] ──► [ Atajo Heurístico: "A" = Adobe ] ──► [ Alucinación ]
+                                                                                   │
+                                                          (Ignora que Adobe es rojo/blanco
+                                                           y que Azure es el logo azul)
+```
+
+### 2.3. Corrección Solo Mediante Confrontación Humana
+Cuando el usuario intervino en el chat preguntando:
+> *"¿Adobe usa Azul en su logo? ¿No será de Azure (Microsoft)?"*
+
+El modelo rectificó de inmediato su postura:
+> *"Sí, el logo de Microsoft Azure utiliza azules como parte principal de su paleta de colores... Por lo tanto, el logo pertenece a Microsoft Azure, no a Adobe."*
+
+---
+
+## 3. Factores Técnicos de la Alucinación en VLMs de 8B
+
+1. **Atajos Heurísticos y Sesgo de Frecuencia:** En el corpus de preentrenamiento, las menciones a logotipos con la letra "A" estilizada en empresas de software están fuertemente dominadas por Adobe. El modelo priorizó la asociación estadística ("A" en software = Adobe) por encima de la verificación de la paleta corporativa.
+2. **Carencia de Razonamiento Verificativo Interno:** Los modelos 8B carecen de mecanismos profundos de auto-consistencia o verificación cruzada perceptual frente a su base de conocimiento factual.
+3. **Desconexión entre Metadatos y Visión:** A pesar de que la ruta del archivo contenía explícitamente `Microsoft_Azure.svg.png`, el modelo de visión operó únicamente sobre los píxeles sin correlacionar el nombre del archivo del sistema anfitrión.
+
+---
+
+## 4. Impacto en Harnesses Autónomos: La Paradoja de la Verificación
+
+El objetivo de un **harness autónomo** es delegar tareas de ingeniería de software de principio a fin sin requerir supervisión paso a paso. Sin embargo, el comportamiento observado introduce una paradoja operativa:
+
+```text
+       Harness Autónomo Teórico                   Harness Local 8B Real
+       ┌────────────────────────┐                ┌────────────────────────┐
+       │ Tarea                  │                │ Tarea                  │
+       │   │                    │                │   │                    │
+       │   ▼                    │                │   ▼                    │
+       │ Ejecución Autónoma     │                │ Ejecución Local (8B)   │
+       │   │                    │                │   │                    │
+       │   ▼                    │                │   ▼                    │
+       │ Código / Artefacto     │                │ Alucinación Parcial    │
+       │   Listo                │                │   │                    │
+       └────────────────────────┘                │   ▼                    │
+                                                 │ ⚠️ Verificación Humana  │
+                                                 │    Obligatoria         │
+                                                 │   │                    │
+                                                 │   ▼                    │
+                                                 │ Re-preguntas / Parches │
+                                                 └────────────────────────┘
+```
+
+### Consecuencias para el Desarrollo:
+* **Pérdida de Autonomía Real:** Si el desarrollador debe auditar manualmente cada afirmación, lectura de diagramas o inspección de capturas de pantalla, el ahorro de tiempo se anula por la sobrecarga cognitiva de revisión.
+* **Riesgo en Decisiones Críticas de Código:** Un agente que confunde dependencias, marcas o librerías basadas en suposiciones erróneas puede introducir dependencias incorrectas, romper integraciones en la nube (ej. confundir SDK de Azure con Adobe Creative SDK) o generar configuraciones inseguras.
+
+---
+
+## 5. Matriz Comparativa: Modelos Locales 8B vs Modelos de Frontera Cloud
+
+| Criterio | Modelo Local 8B (`qwen3-vl:8b`) | Modelo Cloud de Frontera (Claude 3.5 Sonnet / Gemini 2.0 Flash) |
+| :--- | :--- | :--- |
+| **Consumo de Recursos** | 6.5 GB VRAM (bloquea otros modelos) | 0 GB VRAM local (llamada API ligera) |
+| **Tiempo de Inferencia** | 30 a 55 segundos | 1.5 a 4 segundos |
+| **Precisión Semántica** | Media-Baja (vulnerable a alucinaciones) | Alta-Muy Alta (grounding riguroso) |
+| **Confiabilidad Autónoma** | Baja (requiere validación paso a paso) | Alta (apto para workflows desatendidos) |
+| **Costo Monetario** | $0 USD (100% gratuito local) | Micro-centavos por llamada (o capas gratuitas) |
+| **Privacidad** | 100% en máquina local (cero fugas) | Datos viajan a centros de datos de proveedores |
+
+---
+
+## 6. Recomendaciones Estratégicas para el Ecosistema
+
+1. **Arquitectura Híbrida Inteligente:**
+   * Utilizar modelos locales (8B) exclusivamente para tareas **deterministas y sintácticas**: formateo de código, linting, generación de docstrings, refactorizaciones simples y consultas semánticas locales donde exista una suite de tests automatizada que valide el resultado de forma binaria.
+   * Reservar las tareas de **visión compleja, arquitectura, diseño de bases de datos y orquestación multi-archivo** para modelos de frontera (a través de APIs gratuitas de Gemini Flash o tokens de proveedores), donde la tasa de error es mínima.
+2. **Regla de Oro en Harnesses Locales:**
+   * Nunca asumir una salida de un modelo local de 8B como verdad canónica sin una prueba de compilación, ejecución de tests unitarios o confirmación explícita del usuario.
+
+
+================================================================================
+# FILE: wiki/concepts/randomx-cache-isolation.md
+================================================================================
+
+---
+type: concept
+title: "Aislamiento de Recursos y Caché L3 en Minería RandomX"
+description: "Fórmula de dimensionamiento de hilos para RandomX basada en 2 MB de caché L3 y gobernanza contra la inferencia de IA"
+tags: [randomx, xmrig, cache-l3, numa, mineria, cpu, xeon]
+created: 2026-11-22
+updated: 2026-11-22
+---
+
+# Aislamiento de Recursos y Caché L3 en Minería RandomX
+
+## 1. La Regla de Oro de RandomX (2 MB L3 por Hilo)
+
+El algoritmo RandomX utilizado por Monero está diseñado para resistir ASICs mediante el uso intensivo de la memoria caché de nivel 3 (L3 Cache) y accesos de memoria aleatorios con alta sensibilidad a la latencia.
+
+Cada hilo de minería en RandomX requiere estrictamente **2 MB de memoria caché L3**.
+
+### Cálculo de Hilos Máximos
+
+Para dimensionar los hilos de XMRig sin saturar el procesador:
+
+`Hilos Máximos = Piso(Caché L3 Total en MB / 2)`
+
+Por ejemplo:
+- Intel Xeon E5520 (8 MB Caché L3): Hilos Máximos = 8 / 2 = 4 hilos.
+- Intel Xeon X5670 (12 MB Caché L3): Hilos Máximos = 12 / 2 = 6 hilos.
+
+Si se configuran más hilos de los permitidos por la caché física, los hilos excedentes deben acceder a la memoria RAM DDR3 para buscar los datos de Scratchpad, multiplicando la latencia por un factor de 10× y provocando una caída catastrófica del hashrate global.
+
+## 2. Competencia de Memoria: IA vs Minería
+
+Tanto la inferencia de modelos de lenguaje en CPU como la minería RandomX saturan por completo los canales de memoria del bus IMC. Ejecutar ambas tareas en paralelo degrada el rendimiento de la IA a menos de 1 token por segundo y reduce el hashrate en más del 70%.
+
+### Algoritmo del Gobernador (`ai-miner-governor.sh`)
+
+1. El script vigila la presencia de peticiones de inferencia activas en el puerto de Ollama / `llama.cpp`.
+2. Al detectar inferencia en curso:
+   - Envía comando HTTP `POST /1/pause` al minero XMRig.
+   - Libera el 100% del ancho de banda del bus de memoria y núcleos para el modelo de IA.
+3. Al concluir la generación del texto:
+   - Envía comando HTTP `POST /1/resume` al minero.
+   - Restablece la minería de fondo.
+
+
+================================================================================
 # FILE: wiki/concepts/secrets-management-and-gitguardian.md
 ================================================================================
 
@@ -1428,144 +922,110 @@ Para operar de inmediato sin depender de cuentas externas:
 
 
 ================================================================================
-# FILE: wiki/concepts/hardware-upgrades-and-crypto-orchestration.md
+# FILE: wiki/concepts/server-memory-and-bios-governance.md
 ================================================================================
 
 ---
 type: concept
-title: "Guía de Expansión de Hardware, Despliegue de LLMs SSE4.2 y Orquestación Cripto"
-description: "Especificaciones de actualización a doble CPU Xeon, disipador HP, memorias RDIMM, viabilidad de GPU, compilación de llama.cpp para SSE4.2 y orquestación DePIN/Cripto en HP ProLiant ML150 G6"
-tags: [hardware, xeon-upgrade, heatsink, rdimm, gpu-viability, sse42, llama-cpp, denet-storage, crypto-orchestrator, depin]
+title: "Gobernanza de Memoria RAM, Arquitectura RDIMM/UDIMM y Configuración de Arranque en HP ProLiant ML150 G6"
+description: "Estándares de memoria DDR3 ECC, incompatibilidad entre RDIMM y UDIMM, configuración de BIOS AMI v02.61 y arranque con Smart Array P410"
+tags: [rdimm, udimm, ecc, hp-proliant, smart-array, bios, matrox-g200, memory-rules]
 created: 2026-11-26
 updated: 2026-11-26
 ---
 
-# Guía de Expansión de Hardware, Despliegue de LLMs SSE4.2 y Orquestación Cripto
+# Gobernanza de Memoria RAM, Arquitectura RDIMM/UDIMM y Configuración de Arranque en HP ProLiant ML150 G6
 
-## 1. Política de Periféricos y Modo Headless
-* **Acceso y Operación Primaria:** El servidor opera en modo *headless* 100% autónomo. La interfaz de gestión primaria es OpenSSH (`ssh root@192.168.137.50`) a través del enlace Gigabit de 1 Gbps.
-* **Uso del Teclado Físico:** Conectar un teclado USB es posible para emergencias de consola local, pero **completamente innecesario en producción**.
-* **Impacto en el Arranque (POST):** Durante la inicialización del firmware AMI BIOS O21 (2011), la rutina `Auto-detecting USB Mass Storage Devices` interroga los puertos USB. Conectar teclados u otros periféricos en el arranque puede causar demoras de sondeo o pausas interactivas si la BIOS intenta registrarlos como dispositivos de almacenamiento masivo. Se recomienda mantener los puertos USB libres durante los reinicios normales.
+Este documento compendia las reglas de arquitectura de hardware, directivas de población de memoria RAM DDR3 ECC y procedimientos de configuración de arranque (BIOS y Option ROM de controladora RAID) para el nodo servidor HP ProLiant ML150 G6 con procesadores Intel Xeon serie 5500 (Nehalem-EP).
 
 ---
 
-## 2. Hoja de Ruta de Expansión de Procesadores y Disipador (Doble Zócalo LGA 1366)
+## 1. Arquitectura de Memoria del Servidor (Intel Nehalem-EP / Xeon 5500)
 
-La placa base del HP ProLiant ML150 G6 (chipset Intel 5520/5500) cuenta con dos zócalos LGA 1366. El zócalo secundario (CPU 2) se encuentra actualmente desocupado bajo el protector plástico amarillo de fábrica (*CAUTION*).
+El procesador Intel Xeon E5504 integra su propio controlador de memoria (IMC - Integrated Memory Controller) con arquitectura de **Triple Canal (Triple-Channel)** DDR3 a 800/1066/1333 MHz.
 
-### A. Opciones de Procesadores Compatibles
-1. **Opción Económica (Paridad Absoluta):**
-   * Añadir un segundo **Intel Xeon E5504** idéntico al actual (Nehalem-EP, 45 nm, 2.00 GHz, 4 núcleos / 4 hilos, 4 MB caché L3, TDP 80W).
-   * Total: 8 núcleos físicos / 8 hilos, 8 MB caché L3 combinada.
-2. **Upgrade de Alto Rendimiento Recomendado (Westmere-EP, 32 nm):**
-   * Reemplazar por un par emparejado de **Intel Xeon X5670** (2.93 GHz, Turbo 3.33 GHz) o **Intel Xeon X5675** (3.06 GHz, Turbo 3.46 GHz).
-   * Características por procesador: 6 núcleos físicos / 12 hilos, **12 MB de caché L3**, TDP de 95W.
-   * Total del Servidor: **12 núcleos físicos / 24 hilos** y **24 MB de caché L3 total**.
-   * Beneficio: Duplica el rendimiento computacional, habilita 12 hilos de inferencia/cómputo y amplía el límite direccionable de RAM hasta 96 GB / 192 GB.
+### Comparativa Tecnológica: RDIMM vs UDIMM
 
-### B. Disipador Térmico para el Segundo Zócalo (CPU 2)
-* El segundo zócalo requiere el disipador pasivo diseñado específicamente para el chasis ML150 G6, que canaliza el flujo de aire de los ventiladores frontales:
-  * **HP Spare Part Number:** `513944-001`.
-  * **HP Option Kit:** `487109-B21`.
-  * **Características Físicas:** Base de cobre con aletas de aluminio y 4 tornillos de resorte cautivos con rosca LGA 1366. No se deben utilizar disipadores estándar de escritorio (LGA 115x o LGA 1366 con anclaje de plástico *push-pin*) debido a la distancia de perforación y presión del socket de servidor.
+| Parámetro | RDIMM (Registered DIMM / terminación "R") | UDIMM (Unbuffered DIMM / terminación "E") |
+| :--- | :--- | :--- |
+| **Identificador Estándar** | `PC3-10600R`, `PC3-8500R` | `PC3-10600E`, `PC3-8500E` |
+| **Componente Clave** | Chip de registro de hardware (RCD - Registering Clock Driver) que amortigua señales de comando y dirección. | Conexión eléctrica directa entre las líneas del bus del IMC y cada chip DRAM. |
+| **Carga Eléctrica en CPU** | Muy baja; el procesador solo maneja la carga del registro, no de los chips individuales. | Elevada; la capacitancia y carga eléctrica se multiplican por cada chip DRAM insertado. |
+| **Capacidad Máxima (ML150 G6)** | Hasta **48 GB** (Xeon 5500) o hasta **96 GB / 192 GB** (Xeon 5600) poblando los 12 zócalos. | Limitada a un máximo de **24 GB** en todo el servidor (máximo 2 zócalos por canal). |
+| **Estabilidad y Tolerancia 24/7** | Misión crítica empresarial, reduce jitter y ruido eléctrico en el bus. | Estaciones de trabajo de entrada o microservidores de bajo consumo. |
+| **Paradoja de Precios de Mercado** | **Extremadamente económicas** en reventa (surplus de datacenters; no sirven en PCs comunes). | **Más costosas** (alta demanda por usuarios que reviven placas de escritorio y estaciones Z). |
 
 ---
 
-## 3. Gobernanza y Compatibilidad de Memorias RAM para Expansión
+## 2. Incompatibilidad Absoluta y Regla de Coexistencia de Memoria
 
-El servidor cuenta actualmente con **8 GB (2x 4 GB)** limpios en DDR3 Registered ECC Micron (`MT36JBZS51272PY-1G4D1`, `PC3-10600R`).
-
-### Reglas Estrictas de Adquisición:
-1. **Tipo Obligatorio: DDR3 ECC Registered (RDIMM):**
-   * Módulos con sufijo **`R`**: **`PC3-10600R`** (1333 MHz) o **`PC3-8500R`** (1066 MHz), o variantes de bajo voltaje **`PC3L-10600R`** (1.35V retrocompatibles a 1.5V).
-   * Organización recomendada: **Dual Rank (`2Rx4` o `2Rx8`)**.
-2. **Prohibición Absoluta:**
-   * **PROHIBIDO:** Módulos Unbuffered ECC terminados en **`E`** (como `PC3-10600E` UDIMM) y módulos no-ECC de escritorio común.
-   * **PROHIBIDO:** Memorias de reducción de carga (**LRDIMM**, sufijo `L`).
-   * **PROHIBIDO:** Mezclar RDIMM y UDIMM en la misma placa base (el controlador MRC de Intel detendrá el arranque con fallo de memoria).
-3. **Población en Triple Canal:**
-   * Cada CPU gestiona 3 canales de memoria con 6 ranuras (3 blancas primarias `1A`, `2A`, `3A` y 3 negras secundarias `1B`, `2B`, `3B`).
-   * Para conservar el ancho de banda óptimo de 3 canales, adquirir módulos en múltiplos de **3 o 6 por procesador**:
-     * Con 1 CPU: 3x 4 GB (12 GB) o 6x 4 GB (24 GB) / 3x 8 GB (24 GB) o 6x 8 GB (48 GB).
-     * Con 2 CPUs: 6x 4 GB (24 GB) o 12x 4 GB (48 GB) / 12x 8 GB (96 GB).
+> [!CAUTION]
+> **REGLA ABSOLUTA DE HARDWARE (HP QuickSpecs & Intel Memory Reference Code):**
+> **ESTÁ TERMINANTEMENTE PROHIBIDO MEZCLAR MÓDULOS RDIMM CON UDIMM EN EL MISMO SISTEMA.**
+> 
+> 1. **Incompatibilidad a Nivel de Placa y Sistema:** La prohibición aplica no solo al mismo canal, sino a **toda la placa base**. 
+> 2. **Comportamiento en Dual Socket:** Si se instala un segundo procesador Xeon (CPU2), **NO es posible** colocar RDIMM en el CPU1 y UDIMM en el CPU2. El bus QPI (QuickPath Interconnect) y la inicialización de la BIOS exigen un único modo de temporización y búfer homogéneo.
+> 3. **Consecuencia de la Mezcla:** El código MRC (Memory Reference Code) de la BIOS se detiene en POST Fase 1, emite pitidos de error de memoria y bloquea la salida de vídeo (pantalla negra permanente).
 
 ---
 
-## 4. Viabilidad y Restricciones de Tarjetas Gráficas (GPU)
+## 3. Inventario de Módulos del Nodo y Diagnóstico de Adquisición
 
-Es técnicamente viable incorporar una tarjeta gráfica para aceleración de inferencia o vídeo, sujeta a cuatro factores limitantes del chasis:
+### A. Módulos Adquiridos (Tecnología Correcta)
+* **Modelo:** Micron 4 GB `PC3-10600R` (`MT36JBZS51272PY-1G4D1`).
+* **Especificación:** DDR3-1333 Registered ECC con paridad, diseño de bajo perfil.
+* **Cantidad:** 2 módulos (8 GB totales).
+* **Veredicto:** Son las memorias óptimas de grado servidor. Estandarizan el equipo en arquitectura RDIMM.
 
-1. **Fuente de Poder Delta 460W:** Entrega un máximo combinado de 385W en el riel de +12V y **carece por completo de conectores auxiliares de alimentación PCIe (6 u 8 pines)**.
-2. **Límite de Consumo del Bus PCIe:** La ranura PCIe 2.0 x16 entrega un máximo de **75W**. Toda GPU debe ser alimentada exclusivamente por la ranura.
-3. **Espacio Físico y Deflector de Aire:** El deflector plástico azul (*air baffle*) limita la longitud y grosor de las tarjetas; se prefieren modelos de ranura simple (*single-slot*) o perfil bajo.
-4. **Firmware BIOS Legacy:** La BIOS AMI de 2011 no cuenta con UEFI moderno, lo que puede provocar que GPUs recientes (RTX serie 4000 o AMD RX 6000/7000) no den vídeo ni permitan el POST.
+### B. Módulos Preexistentes (Heredados del Propietario Anterior)
+* **Módulos Azules:** 2 × Nanya 4 GB 2Rx8 `PC3-10600E-9-10-E0` (HP P/N: `500210-071` / Kit `500672-B21`).
+* **Módulo Verde:** 1 × Samsung 2 GB 2Rx8 `PC3-10600E-09-10-E1` (HP Spare: `501533-001` / Kit `500670-B21`).
+* **Tipo:** UDIMM Unbuffered ECC.
+* **Veredicto:** Piezas originales HP de catálogo que funcionaban solas sumando 10 GB, pero incompatibles con cualquier ampliación RDIMM.
 
-### Tarjetas Recomendadas (75W sin conectores auxiliares):
-* **Inferencia de IA Ligera / CUDA:**
-  * **NVIDIA Quadro P2000 (5 GB GDDR5):** Formato *single-slot* ultra-delgado, 75W, arquitectura Pascal, 5 GB de VRAM para descargar capas de modelos en GPU.
-  * **NVIDIA Quadro P1000 (4 GB GDDR5):** Formato bajo perfil, consumo de 47W, 4 GB de VRAM.
-  * **NVIDIA GeForce GTX 1650 (4 GB GDDR5/GDDR6):** Versión estándar de 75W sin conector PCIe de 6 pines.
-  * **NVIDIA GeForce GTX 1050 Ti (4 GB GDDR5):** 75W sin conector auxiliar.
-* **Transcodificación y Salida Básica:**
-  * **NVIDIA GeForce GT 1030 (2 GB GDDR5, 30W)** o **Quadro P620 / P400**.
-
----
-
-## 5. Arquitectura de Despliegue de LLMs en CPU SSE4.2 (7.0 GiB Libres)
-
-### Limitación Vectorial de la CPU
-El procesador Intel Xeon E5504 cuenta con extensiones **SSE4.2**, pero **carece de instrucciones AVX y AVX2**. Por esta razón, los binarios precompilados genéricos (como la distribución binaria de Ollama o builds universales de llama.cpp) fallan inmediatamente con `Illegal instruction (core dumped)`.
-
-### Compilación Especializada de `llama.cpp` en AlmaLinux 9:
-```bash
-# 1. Herramientas base y dependencias
-dnf groupinstall -y "Development Tools"
-dnf install -y cmake git python3-pip
-
-# 2. Clonado en partición de datos (/home tiene 340 GB libres)
-cd /home
-git clone https://github.com/ggerganov/llama.cpp.git
-cd llama.cpp
-
-# 3. Compilación limpia para SSE4.2 sin instrucciones vectoriales no soportadas
-cmake -B build -DLLAMA_AVX=OFF -DLLAMA_AVX2=OFF -DLLAMA_FMA=OFF -DLLAMA_F16C=OFF
-cmake --build build --config Release -j4
-```
-
-### Modelos Óptimos con Cuantización Q4_K_M (Formato GGUF):
-Con **7.0 GiB libres en RAM** en AlmaLinux 9, los siguientes modelos caben íntegramente en memoria sin recurrir a disco:
-* **Llama-3.2-1B-Instruct** (~0.8 GB en Q4_K_M): Inferencia a ~18 tokens/s, ideal para clasificación y extracción de datos.
-* **Qwen2.5-1.5B-Instruct** (~1.1 GB en Q4_K_M): Excelente dominio en español y asistencia general.
-* **Llama-3.2-3B-Instruct** (~2.0 GB en Q4_K_M): Alta fidelidad conversacional y seguimiento de instrucciones.
-* **Qwen2.5-3B-Instruct** (~2.1 GB en Q4_K_M): Razonamiento y estructuración de salidas JSON.
-
-*Ejecución con bloqueo en memoria RAM (bloquea el paging a swap):*
-```bash
-./build/bin/llama-cli -m /home/modelos/Llama-3.2-3B-Instruct-Q4_K_M.gguf -p "Tu consulta aqui" -t 4 --mlock
-```
+### C. Directiva de Expansión Futura
+Para ampliar la memoria del servidor a 16 GB, 24 GB o 48 GB:
+* Adquirir exclusivamente módulos **RDIMM** (`PC3-10600R` o `PC3-8500R`) de 4 GB u 8 GB (ej. Micron, Samsung o Hynix de servidor).
+* Descartar cualquier compra de módulos terminados en "E" (`10600E`).
 
 ---
 
-## 6. Integración con DeNet Storage y Orquestación Cripto / DePIN
+## 4. Parámetros de BIOS AMI v02.61 para Arranque Fiable
 
-El servidor HP ProLiant ML150 G6 es una plataforma ideal para orquestar servicios de infraestructura descentralizada 24/7 sin recurrir a minería intensiva de CPU:
+Para evitar falsos bloqueos o fallos de arranque con la controladora **HP Smart Array P410** y discos SAS de 15,000 RPM:
 
-### A. DeNet Storage (Nodo Datakeeper)
-* **Requisitos:** Servidor Linux con alta disponibilidad de red y almacenamiento en disco.
-* **Asignación en el Servidor:** La partición `/home` dispone de **340 GB libres en XFS** respaldada por discos SAS de 15,000 RPM en arreglo RAID Smart Array P410.
-* **Implementación:** Asignar entre 150 GB y 250 GB de almacenamiento dedicado para el nodo DeNet (vía contenedor Docker o binario nativo), generando recompensas por provisión de espacio sin consumir CPU ni agotar la RAM.
+| Parámetro en BIOS Setup | Valor Recomendado | Justificación Operativa |
+| :--- | :--- | :--- |
+| **`Quick Boot`** | **`[Disabled]`** | **Crítico:** Evita que la BIOS salte al bootloader antes de que la controladora Smart Array P410 termine de acelerar (spin-up) los discos SAS y registrar el volumen lógico. |
+| **`Quiet Boot`** | **`[Disabled]`** | Elimina el logo gráfico estático de HP y muestra en consola cruda todos los mensajes del POST, códigos de error y saltos de GRUB. |
+| **`1st Boot Device`** | **`[Hard Drive]`** | Destina el arranque al subsistema de almacenamiento principal. |
+| **`2nd Boot Device`** | **`[Disabled]`** | Previene re-arranques accidentales hacia Windows o interfaces de red cuando se desea operar localmente. |
+| **Submenú `Hard Disk Drives`** | **`1st Drive: [RAID:Smart Array P]`** | Designa la Option ROM de la controladora P410 como disco duro primario (BBS Priority). |
 
-### B. Orquestador de Servicios y Nodos Cripto
-1. **Nodos Ligeros y Servidores Proxy RPC:**
-   * Servidor de balanceo y caché RPC local para redes EVM o servidor Electrum para Bitcoin.
-   * Permite que aplicaciones locales o bots consulten el estado de la blockchain con latencias mínimas sin sobrecargar recursos.
-2. **Bots de Automatización y Trading:**
-   * Ejecución ininterrumpida de bots en Python o Node.js para monitoreo de liquidez en DEXs, arbitraje o alertas de transferencias en contratos inteligentes.
-3. **Redes DePIN sin Colateral (Colocalización en Docker):**
-   * **Grass Network:** Compartición de ancho de banda residual en contenedor aislado.
-   * **Mysterium / Presearch:** Servicios de red descentralizados livianos.
-4. **Centro de Telemetría y Monitoreo:**
-   * Servidor de métricas central con Prometheus y Grafana para supervisar nodos externos, billeteras o granjas de cómputo, complementado con el daemon `xeon-sentinel` y Cockpit en el puerto 9090.
+---
+
+## 5. Configuración de Boot Volume en Option ROM de Smart Array P410
+
+Si la BIOS no encuentra el sector de arranque de AlmaLinux 9 en `/dev/sda`:
+1. Durante el POST, observar la inicialización de la controladora:
+   ```text
+   HP Smart Array P410 Controller (256MB, vX.XX)
+   1 Logical Drive
+   Press <F8> to configure
+   ```
+2. Pulsar **`F8`** para ingresar a la utilidad ACU (Array Configuration Utility) embebida en ROM.
+3. Ingresar a **`Select Boot Volume`**.
+4. Marcar explícitamente el **`Logical Drive 1`** (419 GB SAS RAID) como disco de arranque primario.
+5. Guardar con **`F8`** y reiniciar.
+
+---
+
+## 6. Diagnóstico de Pantalla "Sin Señal" (Matrox G200e + Conversor VGA-HDMI)
+
+La aparición recurrente del mensaje *"Sin señal"* en el monitor o televisor HDMI responde a dos factores físicos:
+1. **Pausa por Detección de Cambio de RAM:** Tras retirar módulos y variar la capacidad (de 10 GB a 8 GB), la BIOS detiene el arranque con el mensaje `Memory size has changed. Press F1 to continue`. Si el monitor aún no sincroniza, la máquina parece apagada pero está esperando la tecla `F1`.
+2. **Desincronización de Reloj en el Conversor VGA-HDMI:** El chip gráfico integrado **Matrox G200e** altera su frecuencia analógica al pasar del modo texto BIOS (720×400 @ 70Hz) al framebuffer del kernel Linux (`mgag200`). Los convertidores pasivos o activos de bajo costo pierden el enganche de fase y el monitor se apaga.
+   * **Mitigación:** Esperar 60-90 segundos a que concluya el arranque del sistema operativo y acceder remotamente por red (SSH / Cockpit) o reconectar el cable de alimentación auxiliar USB del conversor.
 
 
 ================================================================================
@@ -1598,6 +1058,87 @@ Para permitir la visualización privada de métricas:
 5. **Emisión de Token JWT:** Si la validación es correcta, la API emite un token JWT firmado con algoritmo HS256 y un tiempo de expiración (ej. 24 horas).
 6. **Almacenamiento en `sessionStorage`:** El frontend guarda el token únicamente en la memoria de la pestaña del navegador (`sessionStorage`), reduciendo el riesgo de persistencia indebida.
 7. **Guardia de Navegación (`AuthGuard`):** Las rutas protegidas validan la presencia y vigencia del token antes de renderizar los gráficos de telemetría.
+
+
+================================================================================
+# FILE: wiki/concepts/storage-optimization-and-gdrive-backup.md
+================================================================================
+
+---
+title: "Optimización de Almacenamiento Local y Respaldo en Google Drive con Rclone"
+type: "concept"
+category: "storage"
+tags: ["storage", "rclone", "gdrive", "backup", "windows11", "wsl", "disk-cleanup"]
+last_updated: "2026-11-22"
+status: "active"
+---
+
+# Optimización de Almacenamiento Local y Respaldo en Google Drive con Rclone
+
+## 1. Visión General
+
+El entorno de desarrollo y operación de **Xeon Nexus Sentinel** requiere balancear el espacio en disco de la estación de control (Laptop Windows 11 con WSL2) con las necesidades de compilación, modelos locales de IA y telemetría.
+
+Para evitar saturación de la partición de sistema `C:`, se implementó una estrategia híbrida de dos niveles:
+1. **Limpieza interna periódica sin privilegios de administrador:** Eliminación de cachés de npm, pip, NuGet, temporales de usuario y artefactos de desarrollo (`node_modules` inactivos, `.next/cache`).
+2. **Respaldo y liberación de espacio en nube con `rclone`:** Conexión directa a Google Drive (cuenta de 5 TiB con 4.899 TiB disponibles) mediante binario portable en espacio de usuario (`C:\Users\lenin\rclone\rclone.exe`) y script de orquestación `scripts/gdrive-backup.ps1`.
+
+---
+
+## 2. Métricas de Capacidad Verificadas
+
+- **Capacidad Total en Google Drive:** 5 TiB
+- **Espacio Libre en Nube:** 4.899 TiB
+- **Espacio Utilizado Actual:** 19.038 GiB
+- **Espacio Recuperado en Windows C:** +19.91 GB (de 8.94 GB a 28.85 GB libres)
+- **Espacio Reclamado en WSL2:** +33 GB (de 85 GB a 52 GB usados)
+
+---
+
+## 3. Automatización: `scripts/gdrive-backup.ps1`
+
+El script implementa tres operaciones principales con validación de integridad previa al borrado:
+
+| Acción | Modo Rclone | Comportamiento | Casos de Uso Recomendados |
+| :--- | :--- | :--- | :--- |
+| `Copy` | `rclone copy` | Duplica los archivos locales en la nube sin alterar el origen. | Respaldos preventivos de código, configuraciones y modelos. |
+| `Move` | `rclone move` | Transfiere a la nube y **elimina localmente sólo tras verificación SHA-1**. | Liberación de espacio en carpetas de Descargas, renders o videos. |
+| `Sync` | `rclone sync` | Mantiene el destino exactamente idéntico al origen. | Espejado unidireccional de directorios de trabajo. |
+
+### Parámetros Principales
+- `-SourcePath`: Ruta local de origen (ej: `C:\Users\lenin\Documents`).
+- `-RemotePath`: Directorio remoto en Google Drive (ej: `gdrive:Backup/Documents`).
+- `-BeforeDate`: Fecha de corte temporal (por defecto: `'2026-01-01'`).
+- `-CheckLastAccess`: Validación dual estricta. Exige que el archivo no haya sido modificado ni abierto/leído (`LastAccessTime`) después de la fecha de corte. Protege archivos antiguos que se siguen utilizando activamente (como canciones o documentos de consulta frecuente).
+- `-MinAgeDays`: Filtra únicamente archivos con más de N días de antigüedad (ej: `-MinAgeDays 60`).
+- `-DryRun`: Switch de simulación que lista las acciones sin realizar ningún cambio ni borrado.
+
+---
+
+## 4. Regla de Inactividad Real (LastWriteTime vs LastAccessTime)
+
+En Windows 11 NTFS, la actualización de último acceso se encuentra habilitada (`DisableLastAccess = 2`). Una auditoría sobre 170,495 archivos reveló que 40,842 archivos modificados antes de 2026 (23.77 GB) fueron abiertos y utilizados durante 2026.
+Para evitar archivar o borrar archivos de consulta activa (como la música o referencias cotidianas), el sistema requiere la evaluación conjunta:
+`LastWriteTime < FechaCorte Y LastAccessTime < FechaCorte`.
+
+---
+
+## 4. Ejemplos de Uso en PowerShell
+
+### Simulación preventiva (Dry-Run)
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\gdrive-backup.ps1 -SourcePath "C:\Users\lenin\Downloads" -MinAgeDays 60 -Action Move -DryRun
+```
+
+### Liberación real de espacio para archivos con más de 60 días
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\gdrive-backup.ps1 -SourcePath "C:\Users\lenin\Downloads" -MinAgeDays 60 -Action Move
+```
+
+### Respaldo de proyectos o documentos sin borrar localmente
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\gdrive-backup.ps1 -SourcePath "C:\Users\lenin\Documents" -Action Copy
+```
 
 
 ================================================================================
@@ -1666,6 +1207,219 @@ El análisis de compatibilidad frente a las especificaciones del nodo servidor r
   1. Instalar los 3 módulos RAM restantes y ampliar el servidor a 48 GB DDR3 ECC (máximo por CPU).
   2. Incorporar una tarjeta gráfica PCIe de consumo (ej. NVIDIA RTX 3060 12GB o superior) con alimentación adaptada.
   3. Desplegar Strata mediante su contenedor Docker oficial para servir APIs OpenAI/Anthropic hacia la red interna.
+
+
+================================================================================
+# FILE: wiki/entities/hp-server-node.md
+================================================================================
+
+---
+type: entity
+title: "Nodo Físico: Servidor HP ProLiant ML150 G6"
+description: "Servidor empresarial torre de doble zócalo Xeon operando en modo headless con AlmaLinux 9 Minimal"
+tags: [servidor, hp-proliant, almalinux, headless, ilo, xeon, smart-array, ipxe]
+created: 2026-11-22
+updated: 2026-11-23
+---
+
+# Nodo Físico: Servidor HP ProLiant ML150 G6 (`hp-server-node`)
+
+## 1. Identificación y Rol
+
+* **Hostname Local:** `xeon-sentinel.local` o IP estática en red interna.
+* **Sistema Operativo Destino:** AlmaLinux 9.x Minimal (x86_64, sin interfaz gráfica). Instalación desatendida completada en arreglo RAID Smart Array P410 (`/dev/sda`).
+* **Sistema Operativo Preexistente (Erradicado):** Windows Server 2008 R2 Enterprise (sobrescrito y particionado por Kickstart).
+* **Modo Operativo:** Headless continuo (sin teclado ni monitor conectados en producción).
+* **Propósito:** Nodo de cómputo en segundo plano para minería RandomX de baja prioridad, ejecución cuantizada de modelos ligeros con `llama.cpp` y recolección de métricas.
+
+## 2. Puntos de Entrada y Control
+
+* **HP iLO 100i (BMC):** Puerto Ethernet dedicado o compartido. Permite control de energía (power-on/reboot forzado) e inspección de salud térmica.
+* **OpenSSH (Puerto 22):** Acceso administrativo seguro preconfigurado con usuario `root`, contraseña `nexusadmin2026!` y directiva `PermitRootLogin yes`.
+* **Cockpit (Puerto 9090):** Panel web nativo para gestión de discos, red, paquetes y terminal web directa.
+* **Daemon Local (xeon-sentinel):** Servicio systemd que recopila telemetría y controla el gobernador de alternancia.
+
+## 3. Especificaciones de Hardware Verificadas en Laboratorio
+
+* **Procesadores:** Dual Intel Xeon LGA1366 (Nehalem, 4 núcleos por zócalo, SSE4.2, triple canal de memoria DDR3 ECC).
+* **Memoria RAM Verificada y Población de Slots:**
+  * **Configuración Actual Operativa:** 8192 MB (8 GB) limpios en DDR3-1333 Registered ECC.
+  * **Módulos Instalados:** 2 × Micron 4 GB `PC3-10600R` (`MT36JBZS51272PY-1G4D1`) en zócalos primarios blancos `DIMM 2A` y `DIMM 4B` de CPU1.
+  * **Gobernanza de Memoria y Coexistencia:** Prohibición absoluta de mezcla entre módulos RDIMM y UDIMM (`PC3-10600E`). Los módulos preexistentes heredados (2x Nanya 4GB + 1x Samsung 2GB UDIMM) fueron desacoplados para garantizar la estabilidad eléctrica. (Véase detalle en [server-memory-and-bios-governance.md](../concepts/server-memory-and-bios-governance.md)).
+* **Controlador de Almacenamiento:** HP Smart Array P410 con caché SAS/SATA y arreglo RAID activo.
+* **Unidades de Disco Físicas (Identificadas en Bahías Hot-Plug):**
+  * **Bahía 1:** 450 GB SAS 6G Dual-Port 15,000 RPM (HP Spare: `517352-001`).
+  * **Bahía 2:** 450 GB SAS 6G Dual-Port 15,000 RPM (HP Spare: `517352-001`).
+  * **Bahía 3:** Vacía.
+  * **Bahía 4:** Bandeja ciega de relleno (Drive Blank Filler).
+* **Puertos y Panel Frontal:**
+  * 2 puertos frontales USB 2.0 (compatibles con teclado/mouse USB).
+  * LEDs de estado: LED de encendido (Verde continuo), LED de salud del chasis (Verde continuo, confirmando salud operativa 100%), LED de actividad de red.
+  * Botón de encendido frontal (Power/Standby con apagado forzado de 5 segundos).
+* **Puertos de Red (NIC):** Dos puertos Gigabit integrados HP NC107i (Broadcom BCM5723):
+  * **Puerto 1 / Mgmt (inferior):** Puerto Ethernet primario para PXE Netboot, enlace Gigabit con la laptop (192.168.137.1) y gestión.
+  * **Puerto 2 (superior):** Puerto Ethernet secundario.
+* **Video y Pantalla:** Chip gráfico Matrox G200 integrado con salida VGA trasera estándar.
+* **Unidad Óptica:** Lector interno frontal DVD/CD SATA/IDE con bandeja motorizada (`hp DVDROM DH40N`).
+
+## 4. Hallazgos y Resultados de las Pruebas Físicas (Noviembre 2026)
+
+* **Diagnóstico de Video VGA a HDMI y Pérdida de Sincronismo:**
+  * Se conectó un adaptador activo VGA a HDMI hacia una pantalla/TV HDMI LG.
+  * El conversor activo requiere alimentación auxiliar de 5V micro-USB para energizar el circuito analógico-digital. Al energizarlo, la pantalla proyecta nítidamente el logo gráfico inicial de HP ProLiant.
+  * Durante la transición del logo gráfico (640×480) hacia el modo texto (720×400 / Option ROMs), el puerto VGA reinicia momentáneamente la señal de sincronismo, causando que algunos convertidores pierdan el bloqueo de reloj y la TV muestre *"No hay señal"*.
+* **Diagnóstico Acústico de Beeps de POST:**
+  * **2 beeps cortos:** Ocurrieron al encender el servidor con las charolas de discos SAS extraídas hacia afuera. La controladora Smart Array P410 detectó la ausencia del arreglo (`1785-Slot X Drive Array - Drive(s) Not Detected`) y detuvo el POST esperando confirmación interactiva (`Press <F1> to continue, <F2> to configure`).
+  * **1 beep corto:** Al volver a insertar los discos SAS en sus bahías y encender el servidor, sonó un único beep corto, el cual corresponde al código estándar de éxito de POST y transferencia de control hacia el dispositivo de arranque.
+* **Intervención y Validación de Teclado y Setup de BIOS:**
+  * Se confirmó la disponibilidad de teclado USB para la interacción directa con el firmware.
+  * Tecla de acceso confirmada al BIOS Setup: **`F10`** (o `Supr` / Delete).
+  * Firmware detectado: **AMI BIOS v02.61, ROMID 021, Fecha de Revisión 01/18/2011**.
+  * Detección de Procesador: Intel(R) Xeon(R) CPU E5504 @ 2.00GHz (1 CPU físico, 4 de 4 cores lógicos habilitados).
+  * Detección de Memoria: **`System Memory Size: 8192MB` (8 GB)** limpios y estables tras aislar los dos módulos nuevos VLP Micron/IBM 4 GB DDR3 ECC Registered en las ranuras primarias blancas `DIMM2A` y `DIMM4B`.
+  * Dirección MAC integrada: **`44-1E-A1-6E-D2-E4`** (HP NC107i Gigabit / Broadcom MBA v11.0.8).
+* **Despliegue y Conclusión Exitosa de AlmaLinux 9 vía Vía B (inst.stage2 Oficial):**
+  * La instalación desatendida se ejecutó mediante arquitectura de red en dos fases con `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os` y `inst.ks=http://192.168.137.1:8000/ks.cfg`.
+  * Parámetros de pantalla optimizados: `nomodeset inst.text console=tty0 console=ttyS0,115200n8`, erradicando el parámetro obsoleto `vga=normal` que provocaba excepciones de CPU.
+  * Se transfirieron más de 1.4 GB de paquetes RPM base a velocidades de entre 23 y 31 MB/s a través del enlace Gigabit de la laptop (`192.168.137.1`).
+  * Anaconda completó el particionado de los discos SAS 15K RPM (`/dev/sda`), instaló el cargador GRUB en el MBR, ejecutó la configuración `%post` de SSH y sincronizador `chronyd`, y ejecutó el reinicio autónomo hacia el disco SAS local.
+## 5. Telemetría y Estado Operativo en Vivo de AlmaLinux 9 (Noviembre 2026)
+
+Tras el reinicio del servidor y la cesión de control al almacenamiento SAS local, la conexión SSH administrativa (`ssh root@192.168.137.50`) quedó plenamente operativa. La telemetría en vivo auditada por el agente reporta:
+
+* **Sistema Operativo y Kernel:** `AlmaLinux release 9.9 (Chartreuse Bobcat)` con kernel Linux `5.14.0-741.27.1.el9_9.x86_64`.
+* **Procesador Físico:** Intel Xeon E5504 @ 2.00 GHz, 4 núcleos físicos (0-3), 1 zócalo poblado, SSE4.2, 4 MB L3 caché, nodo NUMA 0.
+* **Memoria RAM Real:** 7.5 GiB utilizables en DDR3 Registered ECC Micron (`PC3-10600R`). Consumo base en reposo de solo 509 MiB (7.0 GiB libres para inferencia y cómputo) y Swap de 7.9 GiB.
+* **Almacenamiento SAS Real (`lsblk` / `df -h`):**
+  * `/dev/sda1` (1.0 GB XFS): Montado en `/boot`.
+  * `/dev/sda2` (7.9 GB SWAP): Partición de intercambio activa.
+  * `/dev/sda3` (70.0 GB XFS): Partición raíz `/` (2.1 GB usados, 68 GB disponibles).
+  * `/dev/sda5` (340.3 GB XFS): Partición `/home` para datasets y binarios.
+* **Red Gigabit e Internet:**
+  * Interfaz del SO: `enp4s0` con dirección IPv4 estática `192.168.137.50/24`.
+  * Conectividad WAN: Confirmada mediante resolución HTTP/2 hacia `repo.almalinux.org` vía nodo CDN en Querétaro.
+* **Sincronización Horaria (NTP):**
+  * Servicio `chronyd` activo y sincronizado.
+  * Zona horaria: `America/Mexico_City (CST, -0600)`.
+  * La hora del RTC y del reloj del sistema ha quedado corregida automáticamente, neutralizando el desfase de fábrica de 2011.
+* **Hoja de Ruta de Expansión y Cargas de Trabajo:** Véase [hardware-upgrades-and-crypto-orchestration.md](../concepts/hardware-upgrades-and-crypto-orchestration.md) para detalles sobre actualización a doble socket Xeon 5600, disipador HP `513944-001`, memorias RDIMM, viabilidad de GPU 75W, compilación de `llama.cpp` (SSE4.2) y orquestación DeNet Storage / Cripto.
+* **Topología de Red y Autonomía 24/7:** Véase [dual-wan-and-repeater-network-topology.md](../systems/dual-wan-and-repeater-network-topology.md) para detalles del desacoplamiento de la laptop mediante repetidor AC1200, IP aliasing y estrategia multi-proveedor (Megacable Fibra + EniNetworks WISP).
+
+
+================================================================================
+# FILE: wiki/entities/thunderobot-laptop-node.md
+================================================================================
+
+---
+type: entity
+title: "Nodo de Trabajo: Laptop THUNDEROBOT ZERO (Windows 11 Pro)"
+description: "Estación de trabajo y control con Intel Core i9-13900HX, 32 GB DDR5, NVIDIA RTX 4060 8GB y enlace Gigabit directo al servidor HP"
+tags: [laptop, thunderobot-zero, rtx-4060, i9-13900hx, windows11, cuda, hybrid-ai]
+created: 2026-11-26
+updated: 2026-11-26
+---
+
+# Nodo de Trabajo: Laptop THUNDEROBOT ZERO (`laptop-node`)
+
+## 1. Identificación y Rol Arquitectónico
+* **Identificador de Nodo:** `laptop-node` / `THUNDEROBOT-ZERO`.
+* **Sistema Operativo:** Microsoft Windows 11 Pro (64-bit, Build 26200).
+* **Rol en el Ecosistema:** Estación principal de desarrollo, interfaz gráfica de usuario (Next.js Dashboard, Cockpit), orquestación de agentes IA (Antigravity IDE) y aceleración por GPU (CUDA / Tensor Cores) para inferencia rápida y generación de embeddings.
+* **Topología de Red:** Puerta de enlace (`192.168.137.1`) que provee conexión a Internet compartida (ICS) y enlace Gigabit directo por cable Ethernet hacia el servidor HP ProLiant ML150 G6 (`192.168.137.50`).
+
+---
+
+## 2. Especificaciones de Hardware Auditadas en Vivo (PowerShell / CIM)
+
+### A. Procesador (CPU)
+* **Modelo:** 13th Gen Intel Core i9-13900HX (Raptor Lake).
+* **Topología de Núcleos:** 24 núcleos físicos / 32 procesadores lógicos:
+  * 8 Performance-cores (P-cores) con Hyper-Threading (hasta 5.40 GHz Turbo).
+  * 16 Efficient-cores (E-cores) para tareas en segundo plano.
+* **Caché L3:** 36 MB Intel Smart Cache.
+* **Conjunto de Instrucciones:** AVX, AVX2, FMA3, BMI2, SSE4.2, Intel DL Boost (VNNI) para aceleración de inferencia en CPU.
+
+### B. Memoria RAM
+* **Capacidad Total:** 32 GB (34,359,738,368 bytes / 33.28 GB visibles).
+* **Configuración:** 2 ranuras SODIMM pobladas en Dual-Channel:
+  * Ranura 1: 16 GB Samsung DDR5-5600 MT/s (`M425R2GA3BB0-CWMOD`).
+  * Ranura 2: 16 GB Samsung DDR5-5600 MT/s (`M425R2GA3BB0-CWMOD`).
+* **Memoria Libre en Auditoría:** ~7.28 GB libres físicos en reposo de desarrollo.
+
+### C. Subsistema Gráfico (GPU Dual)
+1. **GPU Integrada (Bajo Consumo):**
+   * Intel UHD Graphics (Raptor Lake-S Mobile Graphics Controller).
+   * 1 GB RAM asignada, encargada de la pantalla principal y reproducción multimedia ligera.
+2. **GPU Dedicada (Aceleración IA / CUDA):**
+   * **Modelo:** NVIDIA GeForce RTX 4060 Laptop GPU.
+   * **Arquitectura:** Ada Lovelace (4 nm TSMC).
+   * **VRAM Dedicada:** 8 GB GDDR6 (8,188 MiB total, ~7,956 MiB libres para modelos).
+   * **Capacidad de Cómputo (Compute Capability):** **8.9** (Tensor Cores de 4ª generación, núcleos RT de 3ª generación, soporte nativo FP8, FP16, INT8, INT4).
+   * **Controlador NVIDIA:** Versión 562.24 (Driver 32.0.16.2124), compatible con CUDA 12.x.
+   * **Temperatura en Reposo:** ~45.8 °C con consumo base de 15.0W.
+
+### D. Almacenamiento
+* **Unidad Física:** SSD NVMe M.2 de 1 TB (`KPEGYMTBW2U001TCJD`), Bus PCIe NVMe, estado Healthy.
+* **Partición C: (NTFS):** 1,022 GB de capacidad total, ~23.2 GB libres (requiere políticas de retención con `rclone` hacia Google Drive de 5 TiB).
+
+### E. Conectividad y Redes
+* **Ethernet Primario (Enlace Servidor):** Realtek PCIe GbE Family Controller (`74:D4:DD:44:D8:80`) operando a **1 Gbps Full Duplex** hacia el servidor HP (`192.168.137.1` -> `192.168.137.50`).
+* **Wi-Fi WAN:** Intel Wi-Fi 6 AX201 160MHz (`F0:20:FF:14:BC:16`).
+* **Virtualización:** Hyper-V activado (`HypervisorPresent: True`), WSL2 operativo con Ubuntu 20.04.
+
+---
+
+## 3. Scripts Estándar de PowerShell para Auditoría en Windows 11
+
+Para reproducir esta telemetría en cualquier momento sin herramientas de terceros:
+
+```powershell
+# 1. CPU y Núcleos
+Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed, L3CacheSize | Format-List
+
+# 2. GPU NVIDIA (CUDA / VRAM / Drivers)
+nvidia-smi --query-gpu=name,memory.total,memory.free,driver_version,compute_cap,power.draw,temperature.gpu --format=csv,noheader,nounits
+
+# 3. Módulos de Memoria Física
+Get-CimInstance Win32_PhysicalMemory | Select-Object DeviceLocator, Capacity, Speed, Manufacturer, PartNumber | Format-Table -AutoSize
+
+# 4. Salud de Discos y Espacio Libre
+Get-PhysicalDisk | Select-Object DeviceId, FriendlyName, MediaType, Size, BusType, HealthStatus | Format-Table -AutoSize
+Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID, FileSystem, Size, FreeSpace, Description | Format-Table -AutoSize
+
+# 5. Adaptadores de Red y Velocidad de Enlace
+Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed, MacAddress | Format-Table -AutoSize
+```
+* **Stack de Agente Autónomo Local (Vixl + LiteLLM + Ollama + MCP):** Véase [local-autonomous-agent-stack-vixl-litellm.md](../systems/local-autonomous-agent-stack-vixl-litellm.md) para el detalle de la configuración de Vixl como host MCP, LiteLLM en puerto 4000 con bypass de thinking y Ollama con `qwen3:8b-agent` (16K context).
+
+
+================================================================================
+# FILE: wiki/entities/windows-laptop-node.md
+================================================================================
+
+---
+type: entity
+title: "Nodo Workstation: Laptop Windows 11"
+description: "Estación de trabajo principal para desarrollo agéntico con Antigravity IDE, Ollama y consola de control"
+tags: [workstation, windows11, antigravity-ide, ollama, wsl2]
+created: 2026-11-22
+updated: 2026-11-22
+---
+
+# Nodo Workstation: Laptop Windows 11 (`windows-laptop-node`)
+
+## 1. Identificación y Rol
+
+* **Sistema Operativo:** Windows 11 Pro con subsistema WSL 2 (Ubuntu 20.04 LTS).
+* **Entorno de Desarrollo:** Antigravity IDE (agente AI integrado con servidores MCP y LLM Wiki).
+* **Motor de Inferencia Local:** Ollama Desktop para modelos locales de asistencia (`qwen3:8b-8k`, `gemma4`).
+* **Propósito:** Estación de trabajo para el programador. Proporciona los periféricos físicos (pantalla, teclado y ratón) para administrar el servidor HP ProLiant a través de la red local.
+
+## 2. Conectividad con el Servidor
+
+* Conexión vía WiFi hacia el punto de acceso / repetidor compartido con el servidor.
+* Sesiones de terminal OpenSSH y visualización del panel web de Cockpit en navegador.
+* Gestión de repositorios en GitHub mediante `gh` CLI y flujos CI/CD.
 
 
 ================================================================================
@@ -2003,6 +1757,583 @@ Genera la estructura de directorios, los archivos de memoria OKF y todo el códi
 
 
 ================================================================================
+# FILE: wiki/systems/almalinux-daemon.md
+================================================================================
+
+---
+type: system
+title: "Daemon de Telemetría en AlmaLinux 9"
+description: "Servicio en segundo plano para recolección de métricas de CPU, RAM, temperatura, IA y minería en AlmaLinux 9"
+tags: [almalinux, daemon, python, telemetria, systemd]
+created: 2026-11-22
+updated: 2026-11-22
+---
+
+# Daemon de Telemetría en AlmaLinux 9 (`xeon-sentinel`)
+
+## 1. Responsabilidad y Funcionamiento
+
+El daemon de telemetría reside en el servidor HP ProLiant ML150 G6 operando sobre **AlmaLinux 9 Minimal**. Su propósito es inspeccionar el estado del hardware, los procesos de inferencia local (`llama.cpp` o Ollama) y el minero XMRig (RandomX), empaquetando periódicamente un objeto JSON que se despacha vía HTTP POST al Cloud Relay.
+
+## 2. Métricas Recolectadas
+
+1. **CPU y Frecuencia:** Lectura diferencial de `/proc/stat` y `/proc/cpuinfo` calculando el porcentaje de uso por núcleo e integral.
+2. **Memoria y NUMA:** Lectura de `/proc/meminfo` (MemTotal, MemFree, Buffers, Cached) y desglose de páginas locales vs remotas vía `numastat`.
+3. **Sensores Térmicos:** Extracción mediante `sysfs` (`/sys/class/thermal/` o `coretemp`) o comando IPMI BMC.
+4. **Estado de IA Local:** Sonda HTTP hacia el endpoint `/api/tags` o `/api/ps` de Ollama / `llama.cpp` server para medir modelos cargados y tiempos de generación.
+5. **Estado de Criptominería:** Consulta al endpoint HTTP local de XMRig (`http://127.0.0.1:18088/1/summary`) extrayendo hashrate a 10s, 60s, 15m y temperatura de encapsulado.
+
+## 3. Configuración y Ejecución
+
+- **Archivo de Configuración:** `server/daemon/config.yaml`
+- **Servicio Systemd:** `server/systemd/xeon-sentinel.service`
+- **Cadencia de Publicación:** Cada 5 segundos en condiciones normales, con reintentos exponenciales ante fallos de red.
+
+
+================================================================================
+# FILE: wiki/systems/cloud-relay-api.md
+================================================================================
+
+---
+type: system
+title: "Cloud Relay API en Python (FastAPI)"
+description: "Microservicio REST intermediario para ingesta y distribución de telemetría en nubes SaaS gratuitas"
+tags: [fastapi, python, cloud-relay, koyeb, zeabur, render, jwt]
+created: 2026-11-22
+updated: 2026-11-22
+---
+
+# Cloud Relay API en Python (`cloud-relay`)
+
+## 1. Propósito de la Capa de Intermediación
+
+Debido a que el servidor HP ProLiant se encuentra tras una conexión de banda ancha residencial (NAT de doble capa o Carrier-Grade NAT sin IP pública fija) y el frontend se ejecuta como archivos estáticos en GitHub Pages, el **Cloud Relay** actúa como puente público seguro de baja latencia.
+
+## 2. Endpoints Expuestos
+
+| Método | Ruta | Autenticación | Función |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/telemetry` | Encabezado `X-Server-Token` | Recibe payload JSON del daemon en AlmaLinux y lo almacena en RAM circular |
+| `GET` | `/api/telemetry/latest` | `Bearer <JWT_TOKEN>` | Devuelve la instantánea más reciente de métricas al frontend |
+| `GET` | `/api/telemetry/history` | `Bearer <JWT_TOKEN>` | Devuelve una serie temporal con las últimas 100 muestras |
+| `POST` | `/api/auth/login` | Público (Body JSON) | Valida usuario y contraseña cifrada emitiendo un JWT firmado |
+| `GET` | `/api/health` | Público | Comprobación de estado para keep-alive y monitorización de uptime |
+
+## 3. Aislamiento y Memoria Volátil
+
+- El servicio mantiene un buffer circular `deque(maxlen=100)` en memoria volátil de Python.
+- No utiliza bases de datos externas como PostgreSQL o Redis, garantizando un consumo de RAM inferior a 70 MB y adaptándose al nivel gratuito de Koyeb, Zeabur o Render.
+
+
+================================================================================
+# FILE: wiki/systems/dual-wan-and-repeater-network-topology.md
+================================================================================
+
+---
+type: system
+title: "Topología de Red Autónoma: Repetidor AC1200, IP Aliasing y Estrategia Multi-ISP"
+description: "Arquitectura de desacoplamiento de la laptop para operación 24/7 del servidor HP mediante repetidor WiFi, direccionamiento IP múltiple y aprovechamiento de Megacable (Fibra) y EniNetworks (WISP)"
+tags: [networking, repeater-bridge, ip-aliasing, dual-wan, megacable, eninetworks, headless-24-7, depin-multi-ip]
+created: 2026-11-26
+updated: 2026-11-26
+---
+
+# Topología de Red Autónoma: Repetidor AC1200, IP Aliasing y Estrategia Multi-ISP
+
+## 1. El Desafío: Desacoplamiento de la Estación de Trabajo
+* **Situación Inicial:** El servidor HP ProLiant ML150 G6 se encontraba conectado directamente al puerto Ethernet de la laptop mediante Conexión Compartida a Internet (ICS) en Windows (`192.168.137.1` -> `192.168.137.50`).
+* **Limitación Operativa:** La laptop es una estación móvil de trabajo que no puede permanecer conectada por cable de forma permanente. Apagarla, reiniciarla o trasladarla desconectaba al servidor de Internet e interrumpía los servicios desatendidos.
+* **Objetivo de Infraestructura:** Otorgar al servidor HP ProLiant conectividad de red y salida a Internet **100% autónoma 24/7**, accesible desde cualquier punto de la casa por WiFi sin necesidad de cables hacia la laptop.
+
+---
+
+## 2. Topología Física con Repetidor WiFi Dual-Band AC1200
+
+El repetidor AC1200 dispone de radio dual (2.4 GHz y 5 GHz hasta 867 Mbps) y **2 puertos LAN Ethernet RJ-45 (10/100 Mbps)**:
+
+```text
+[ Módem Megacable (Fibra Óptica) ]
+         │
+         │  (Enlace WiFi 5 GHz)
+         ▼
+[ Repetidor AC1200 en Modo Puente / Extender ] (Junto al servidor)
+         ├── Puerto LAN 1 (RJ45) ──► HP ProLiant Puerto Inferior (enp4s0) -> AlmaLinux 9
+         └── Puerto LAN 2 (RJ45) ──► HP ProLiant Puerto Superior (iLO 100i) -> Gestión Hardware
+```
+
+### Protocolo de Despliegue Físico:
+1. **Ubicación:** Enchufe eléctrico inmediato al chasis HP ProLiant ML150 G6.
+2. **Vinculación Inalámbrica:** El repetidor se asocia por WiFi en la banda de **5 GHz** al módem de **Megacable** para garantizar mínima latencia y máxima tasa de transferencia sin saturación del espectro de 2.4 GHz.
+3. **Conexiones Cableadas Cortas:**
+   * **Puerto LAN 1 del Repetidor:** Conectado al puerto inferior Gigabit (`enp4s0`, controlador Broadcom BCM5723) del servidor. Cursa el tráfico de producción de AlmaLinux 9 (SSH, DeNet Storage, DePIN y APIs).
+   * **Puerto LAN 2 del Repetidor:** Conectado al puerto superior Fast Ethernet (`iLO 100i Mgmt`) del servidor. Permite gestión remota fuera de banda (encendido, apagado, ciclos de energía y consola BIOS remota) a través de la red local.
+4. **Acceso Inalámbrico desde la Laptop:** La laptop se conecta normalmente a la red WiFi del hogar y accede al servidor por SSH (`ssh root@<IP_Megacable>`) con total movilidad.
+
+---
+
+## 3. Direccionamiento IP y Gestión Multi-IP en AlmaLinux 9
+
+Para mantener la compatibilidad con el entorno de laboratorio actual y permitir reconectar el cable directo de la laptop cuando se requiera máxima velocidad (1 Gbps) para inferencia de IA distribuida, se implementa una estrategia de **IP Aliasing (Múltiples IPs en la misma tarjeta física)**:
+
+### A. Estructura de Direcciones en `enp4s0`:
+1. **IP Primaria (Dinámica o Estática en LAN de Megacable):**
+   * Asignada por el servidor DHCP del módem/repetidor (ej. `192.168.1.150/24` o `192.168.0.150/24`).
+   * Configurada con la puerta de enlace predeterminada (*Default Gateway*) hacia Internet.
+   * Utilizada para navegación, actualizaciones, DeNet Storage, DePIN y SSH general desde la casa.
+2. **IP Secundaria Fija (Laboratorio de IA y Scripts):**
+   * Configurada estáticamente como alias: `192.168.137.50/24`.
+   * **Sin Gateway**, para evitar conflictos de enrutamiento con la salida principal a Internet.
+   * Permite que si en algún momento se conecta el cable de la laptop directamente al servidor, la comunicación funcione de inmediato sin modificar scripts ni configuraciones.
+
+### B. Comando de Configuración en AlmaLinux 9 (`nmcli`):
+```bash
+# Agregar la IP secundaria fija manteniendo la primaria del módem
+nmcli connection modify enp4s0 +ipv4.addresses 192.168.137.50/24
+nmcli connection up enp4s0
+```
+
+---
+
+## 4. Opciones de Expansión Hardware (Dual-NIC Físico)
+
+En caso de requerir aislamiento físico estricto de redes o conexión cableada simultánea a dos módems:
+* **Slot PCIe Libre:** Instalar una tarjeta PCIe x1 Gigabit Ethernet (controlador Intel 82574L o Realtek RTL8111, costo aprox. 150 a 250 pesos MXN).
+* **Adaptador USB-Ethernet:** Adaptador USB a Gigabit Ethernet conectado en los puertos traseros.
+* **Separación de Tráfico:**
+  * **NIC 1 (`enp4s0` Integrada):** Conectada 24/7 al repetidor/módem para tráfico público y DePIN.
+  * **NIC 2 (PCIe / USB Nueva):** Enlace privado punto a punto de 1 Gbps reservado para la laptop (`192.168.137.50`) para inferencia RPC con `llama.cpp`.
+
+---
+
+## 5. Estrategia Multi-ISP: Megacable (Fibra) vs. EniNetworks (Antena WISP)
+
+La disponibilidad de dos conexiones a Internet independientes y activas 24/7 bajo tecnologías físicas distintas ofrece una ventaja competitiva excepcional para la arquitectura:
+
+| Parámetro | Conexión A: Megacable | Conexión B: EniNetworks |
+| :--- | :--- | :--- |
+| **Medio de Acceso** | Fibra Óptica (FTTH) | Inalámbrico de Microondas (Antena en Techo / WISP) |
+| **Perfil de Tráfico** | Ancho de banda elevado (100–500+ Mbps), latencia ultra-baja (<10 ms), estabilidad frente a tormentas | Ancho de banda moderado, latencia 20–60 ms sensible al clima |
+| **Dirección IP Pública** | Pool residencial / dinámico de Megacable | Pool de direcciones IP públicas de EniNetworks |
+| **Rol Óptimo en el Ecosistema** | **Tráfico Crítico y Almacenamiento:**<br>• Nodo **DeNet Storage** (traslado veloz de fragmentos de datos)<br>• Acceso administrativo SSH, Cockpit y API Cloud Relay<br>• Descarga de modelos y paquetes RPM | **Monetización DePIN y Redundancia:**<br>• Nodo **Grass Network** (aprovecha una segunda IP pública residencial)<br>• **Failover de Respaldo:** Salida de emergencia si la fibra física sufre corte exterior<br>• Bots de scraping y monitoreo blockchain distribuido |
+
+### Caso de Uso de Doble Monetización Residencial (Grass Network):
+Las redes de compartición de ancho de banda descentralizado (DePIN) recompensan nodos según su dirección IP pública única:
+* Colocar la laptop en la red de Megacable y el servidor en la de EniNetworks (o viceversa mediante dos interfaces de red) permite operar **dos nodos residenciales genuinos simultáneos**, duplicando la acumulación de recompensas de forma legítima sin incurrir en penalizaciones por duplicidad de IP.
+
+
+================================================================================
+# FILE: wiki/systems/headless-pxe-netboot.md
+================================================================================
+
+---
+title: "Arquitectura de Despliegue Headless PXE Netboot para HP ProLiant ML150 G6"
+description: "Servidor PXE/TFTP/HTTP autonomo en Python para instalacion desatendida de AlmaLinux 9 en servidores sin monitor ni teclado."
+category: "systems"
+date: "2026-11-23"
+status: "active"
+tags: ["pxe", "netboot", "tftp", "http", "ipxe", "kickstart", "almalinux9", "headless"]
+---
+
+# Arquitectura de Despliegue Headless PXE Netboot
+
+## 1. Contexto y Desafio Tecnico
+El servidor **HP ProLiant ML150 G6** es un nodo de computo empresarial:
+- Controlador de almacenamiento interno: HP Smart Array P410 / SAS-SATA con discos configurados.
+- Sistema operativo preexistente en disco: **Windows Server 2008 R2 Enterprise**.
+- Prioridad de arranque del BIOS: Da preferencia al disco duro interno sobre el arranque por red PXE.
+- Sin monitor ni teclado USB externo conectado directamente al servidor (pantalla verificada por HDMI en TV mediante conversor VGA a HDMI con alimentacion USB).
+- Medios disponibles en laptop: Grabadora externa USB **PHILIPS CDRW/DVD SCB5265 (Unidad E:)** y discos virgenes **CD-R (700 MB)**.
+
+## 2. Estrategia de Arranque Hibrido: CD-R iPXE + Red Gigabit (PXE/HTTP)
+Dado que la imagen oficial `AlmaLinux-9-boot.iso` pesa 1.55 GB y excede la capacidad fisica de un CD-R (700 MB maximo, requiere DVD):
+1. Se emplea **iPXE ISO (`ipxe.iso`, ~9 MB)** grabada en el CD-R.
+2. El BIOS del HP ProLiant ML150 G6 prioriza de fabrica la unidad lectora frontal DVD/CD sobre los discos duros internos.
+3. El CD-R arranca iPXE en menos de 2 segundos sin requerir intervencion de teclado.
+4. iPXE se comunica por el puerto inferior Gigabit (`1/Mgmt`) con el servidor autonomo en la laptop (`192.168.137.1:8000`).
+5. Descarga `vmlinuz` (14.62 MB) e `initrd.img` (218.16 MB) por HTTP a 1 Gbps e inicia la instalacion desatendida via Kickstart (`ks.cfg`).
+
+```text
+[ Laptop Windows 11 ] (Gateway: 192.168.137.1)
+  │  ├── Conexión Compartida (ICS): Enruta tráfico de Wi-Fi hacia Ethernet
+  │  ├── Servidor HTTP (Puerto 8000): Sirve boot.ipxe, ks.cfg, vmlinuz e initrd.img
+  │  ├── Servidor TFTP (Puerto 69): Sirve undionly.kpxe (iPXE)
+  │  └── Servidor DHCP/ProxyDHCP (Puerto 67): Responde con opciones PXE dinámicas
+  │
+  ▼ (Cable Ethernet Gigabit - 1 Gbps)
+[ HP ProLiant ML150 G6 ] (Puerto Inferior 1/Mgmt - NC107i Gigabit)
+  1. BIOS PXE ROM solicita IP -> Recibe 192.168.137.50 y next-server=undionly.kpxe
+  2. TFTP descarga undionly.kpxe en ~150 ms
+  3. iPXE arranca -> Solicita DHCP con Opción 175
+  4. DHCP detecta iPXE -> Entrega URL http://192.168.137.1:8000/boot.ipxe
+  5. iPXE descarga vmlinuz (~15 MB) e initrd.img (~228 MB) por HTTP a 1 Gbps (~2-3 seg)
+  6. Anaconda inicia en modo texto desatendido leyendo ks.cfg
+  7. Instalación automatizada completa de AlmaLinux 9 y reinicio con OpenSSH activo
+```
+
+## 3. Resolucion del Bucle Infinito de iPXE
+Para evitar que el cliente iPXE descargue cíclicamente su propio binario en entornos headless, el servidor DHCP implementa discriminación por cabeceras RFC 2132 / RFC 3925:
+- **Cliente BIOS Estándar (Sin Opción 175):** Se le entrega `undionly.kpxe` vía TFTP.
+- **Cliente iPXE (Con Opción 175 o User-Class 'iPXE'):** Se le entrega la directiva HTTP directa `http://192.168.137.1:8000/boot.ipxe`.
+
+## 4. Parametros Kickstart (ks.cfg) para Operacion Headless
+- Modo texto estricto (`text`, `skipx`).
+- Aceptación automática de licencia (`eula --agreed`).
+- Particionamiento automático MBR/BIOS (`bootloader --location=mbr`, `clearpart --all --initlabel`, `autopart --type=plain`).
+- Red por DHCP en enlace activo (`network --bootproto=dhcp --device=link --activate --onboot=yes`).
+- Contraseña de root preconfigurada (`rootpw --plaintext nexusadmin2026!`).
+- SSH habilitado automáticamente (`services --enabled="sshd"`).
+- Reinicio automático al terminar (`reboot`).
+
+## 5. Pruebas de Diagnóstico y Resultados de Campo con el Servidor (Noviembre 2026)
+
+Durante las sesiones de laboratorio y pruebas en vivo con el HP ProLiant ML150 G6 se ejecutaron y validaron los siguientes componentes:
+
+### 5.1 Diagnóstico de Video y Descubrimiento del Estado del Servidor
+- **Prueba:** Conexión del puerto VGA trasero hacia TV mediante adaptador activo VGA a HDMI.
+- **Resultado:** El convertidor activo requería alimentación externa de 5V micro-USB para energizar el circuito analógico-digital. Al energizarlo por USB, la señal de video apareció de forma inmediata.
+- **Hallazgo:** La pantalla reveló que el servidor tiene preinstalado **Windows Server 2008 R2 Enterprise** en un arreglo SAS RAID administrado por la controladora **HP Smart Array P410**.
+
+### 5.2 Pruebas de Red y Sondeo DHCP/ICS
+- **Entorno:** Conexión compartida a Internet (ICS) en Windows 11 sobre el segmento `192.168.137.0/24` (laptop como Gateway en `192.168.137.1`).
+- **Scripts de Diagnóstico con Timeouts Estrictos (Mandato 6):**
+  - `scripts/scan-ics-range.ps1`: Escaneo paralelo de direcciones IP en la subred ICS.
+  - `scripts/detect-ilo.ps1`: Sondeo de puertos HTTP (80) y HTTPS (443) para identificar la interfaz HP iLO 100i con timeout de 2 segundos por nodo.
+  - `scripts/monitor-hp-ip.ps1`: Monitoreo continuo de solicitudes ARP y asignaciones de IP para el servidor.
+  - `scripts/check-dhcp-leases.ps1`: Inspección de concesiones de red emitidas por ICS.
+  - `scripts/sniff-broadcasts.ps1` y `scripts/sniff-ports.ps1`: Captura no bloqueante de tramas DHCP UDP 67/68 y TFTP UDP 69.
+- **Conclusión de Red:** El servidor físico no realizaba broadcast DHCP PXE durante el encendido debido a que la secuencia de arranque del BIOS priorizaba el disco duro interno Smart Array P410.
+
+### 5.3 Implementación y Verificación del Servidor PXE Autónomo
+- **Componente:** `scripts/headless_pxe_server.py` implementado en Python estándar sin dependencias externas pesadas.
+- **Servicios Integrados:**
+  - Servidor DHCP/ProxyDHCP en puerto UDP 67.
+  - Servidor TFTP en puerto UDP 69 sirviendo `undionly.kpxe`.
+  - Servidor HTTP en puerto TCP 8000 sirviendo `boot.ipxe`, `ks.cfg`, `vmlinuz` (14.62 MB) e `initrd.img` (218.16 MB).
+- **Control de Bucle:** Discriminación de Opción 175 verificada para entrega directa del script de arranque HTTP al detectar clientes iPXE.
+- **Lanzador Rápido:** Creación de `iniciar-servidor-pxe.bat` para ejecución en Windows 11 con elevación de privilegios de red.
+
+### 5.4 Grabación Desatendida de iPXE en CD-R
+- **Desafío:** Imposibilidad de grabar el ISO completo de AlmaLinux 9 (1.55 GB) en un CD-R virgen (700 MB) y ausencia de teclado físico USB conectado al servidor para cambiar el orden de arranque en el BIOS.
+- **Solución:** Grabación de la imagen ultraligera `ipxe.iso` (9 MB) en CD-R.
+- **Herramienta:** Creación de `scripts/burn-iso.ps1`, automatizando `C:\Windows\System32\isoburn.exe /Q E: C:\Users\lenin\pxeboot\ipxe.iso` sobre la unidad óptica externa PHILIPS CDRW/DVD SCB5265 (Unidad E:).
+- **Resultado:** Grabación de pistas finalizada exitosamente con código de salida 0, lista para ser leída por la lectora frontal del servidor y conectar por Gigabit al servidor PXE de la laptop.
+
+### 5.5 Diagnóstico de Beeps del BIOS, Arreglo SAS y Validación de Hardware
+- **Comportamiento con Discos Extraídos (2 Beeps Cortos):**
+  - Al extraer las dos charolas de discos SAS frontales hacia afuera para evitar el inicio de Windows Server, la controladora Smart Array P410 emitió 2 beeps cortos y pausó el POST en la advertencia `1785-Slot X Drive Array - Drive(s) Not Detected (Press F1 to continue)`.
+  - Sin confirmación, el servidor se mantuvo esperando en pausa preventiva.
+- **Comportamiento con Discos Reinsertados (1 Beep Corto):**
+  - Al reinsertar y bloquear las dos charolas de discos SAS (450 GB 15K RPM HP Spare 517352-001) y reiniciar, el servidor emitió un único beep corto (POST exitoso y saludable).
+  - El BIOS reconoció 8192 MB (8 GB) limpios en las ranuras primarias blancas `DIMM2A` y `DIMM4B` con módulos Micron/IBM DDR3 ECC Registered.
+
+### 5.6 Configuración del BIOS Setup y Bloqueo Definitivo de Windows
+- **Acceso a Setup de Firmware:** Entrada interactiva confirmada con tecla **`F10`** (o `Supr` / Delete).
+- **Parámetros Validados:**
+  - Placa Base: HP ProLiant ML150 G6, ROMID 021, ROM Revision 01/18/2011.
+  - Procesador: Intel Xeon E5504 @ 2.00GHz (1 procesador físico, 4 cores).
+  - Red Onboard: MAC `44:1E:A1:6E:D2:E4` (HP NC107i / Broadcom MBA v11.0.8).
+  - Prioridad de Arranque USB: `USB Device Boot Priority: [High]`.
+- **Orden de Arranque Establecido (Pestaña Boot):**
+  - `1st Boot Device:` **`[CD/DVD]`**
+  - `2nd Boot Device:` **`[Network:MBA v11.0.]`**
+  - `3rd Boot Device:` **`[Disabled]`** (📌 Deshabilitación total de `[Hard Drive]`).
+- **Efecto de Bloqueo:** El sistema preexistente Windows Server 2008 R2 Enterprise (dominio gubernamental `gppan.senado.gob.mx\administrador`) queda 100% inhabilitado para arrancar.
+- **Estado de Halt y Señal de Vídeo:** Al fallar la lectura del CD y agotarse los intentos de PXE, el BIOS ejecuta un ciclo de Halt / Boot Failure. La controladora gráfica Matrox G200e desconecta la sincronización VGA analógica, provocando que el conversor activo muestre en la TV LG el mensaje de **"Sin señal"**.
+
+### 5.7 Refactorización del Servidor PXE Autónomo (Subnet Directed Broadcast)
+- **Diagnóstico del Fallo de Negociación DHCP:**
+  - En Windows 11 con múltiples interfaces activas (Wi-Fi + Ethernet Realtek + adaptadores virtuales VMware/WSL), los paquetes dirigidos a la dirección de difusión universal `255.255.255.255:68` son enrutados por el kernel hacia la interfaz con la ruta predeterminada (Wi-Fi), impidiendo que el cliente en el enlace directo Ethernet reciba el `DHCPOFFER`.
+  - La inclusión de la Opción DHCP 60 (`PXEClient`) en el puerto 67 instruye al cliente PXE a ignorar el `bootfile` y buscar un ProxyDHCP externo en el puerto 4011.
+- **Correcciones Implementadas en `headless_pxe_server.py`:**
+  1. **Subnet Directed Broadcast:** Se transmite tanto a `192.168.137.255:68` como a `255.255.255.255:68`, garantizando la salida física del paquete por la NIC Ethernet local.
+  2. **Depuración de Opción 60:** Eliminación de la Opción 60 en las respuestas del puerto 67, permitiendo que la ROM Broadcom MBA v11.0 tome el `bootfile` (`undionly.kpxe`) y la IP TFTP (`192.168.137.1`) de forma directa y unificada.
+  3. **Multi-Socket Binding:** Enlace concurrente en `192.168.137.1:67/4011/69` y `0.0.0.0:67/4011/69` con hilos dedicados para TFTP y HTTP.
+
+### 5.8 Resolución de Error SSL por Reloj de BIOS y Despliegue de BaseOS
+- **Incidente de Certificados No Válidos (`curl: (60) SSL certificate problem`):**
+  - Al iniciar el ramdisk Anaconda y cargar `dracut-initqueue`, la descarga de la imagen del instalador (`stage2`) falló repetidamente contra `https://repo.almalinux.org/...`.
+  - Causa Raíz: El reloj en tiempo real (RTC) del servidor HP se encontraba en `Tue 01/18/2011` debido a la pila de BIOS agotada. Para las herramientas criptográficas modernas en 2011, los certificados SSL/TLS emitidos en 2025/2026 figuran con fecha futura (`certificate is not yet valid`).
+- **Remediación en Tiempo Real en `boot.ipxe` y `ks.cfg`:**
+  - Redirección del origen de paquetes a protocolo HTTP plano: `http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os/`.
+  - Incorporación de parámetros de bypass de verificación en la línea de comando del kernel y Kickstart: `inst.noverifyssl` y `--noverifyssl`.
+- **Resultado del Despliegue en Vivo:**
+  - Descarga exitosa de `vmlinuz` (14 MB), `initrd.img` (218 MB), `boot.ipxe` y `ks.cfg` por HTTP local en el puerto 8000.
+  - Activación del framebuffer de consola Matrox G200e (`mgag200drmfb`) en resolución de 128×48 caracteres.
+  - Transferencia ininterrumpida de más de 1.4 GB de paquetes RPM base mediante la conexión compartida ICS de la laptop a velocidades de ~12 MB/s, procediendo al particionado desatendido del arreglo Smart Array P410 (`/dev/sda`).
+
+### 5.9 Despacho de Arranque Multi-Opción con Fallback a Disco SAS (`sanboot 0x80`)
+- **Desafío:** Pérdida recurrente de configuración en NVRAM del BIOS (batería CR2032 agotada) que revierte el equipo a los valores de fábrica de 2011, provocando bucles si el usuario no interviene en menos de 1 segundo en el menú BBS.
+- **Solución iPXE:** Transformación de `boot.ipxe` en un menú selectivo con timeout de 3 segundos:
+  - Opción por defecto: `sanboot --no-describe --drive 0x80` (ejecuta INT 13h directo sobre el MBR de la controladora Smart Array P410).
+  - Opciones secundarias: Modo Rescate de Linux por red (`inst.rescue`) y Reinstalación desatendida Kickstart (`:reinstall`).
+- **Resguardo y Versionado Oficial:** Copia de respaldo en `boot.ipxe.installer-backup` e incorporación de toda la suite de arranque (`headless_pxe_server.py`, `ks.cfg`, `boot.ipxe`) dentro del repositorio rastreado por Git en `server/pxe/` (Commit `39d8342`).
+
+### 5.10 Vía B: Arquitectura de Red de Dos Fases (inst.stage2) y Mitigación de Triple Fault
+- **Diagnóstico del Reinicio Temprano (Triple Fault en Modo Real BIOS):**
+  - Durante las pruebas con los 8 GB RDIMM Micron estabilizados, la transferencia por red de `vmlinuz` (15 MB) e `initrd.img` (228 MB) culminó en exactamente 5 segundos a 1 Gbps (243 MB entregados).
+  - Sin embargo, a los 35-45 segundos el servidor experimentó un reinicio automático de hardware.
+  - Causa Raíz 1: En los kernels modernos de RHEL 9 / AlmaLinux 9 (Linux 5.14+), el parámetro heredado de 16 bits `vga=normal` se encuentra completamente deprecado; al intentar invocar la llamada de selector de vídeo de BIOS en modo real, el kernel falla y dispara una excepción de CPU.
+  - Causa Raíz 2: La BIOS AMI 2011 opera en modo real de 16-bit al despachar llamadas iPXE/UNDI; la descompresión en memoria contigua de un ramdisk de 228 MB (que en memoria alcanza 700+ MB) colisiona con el área EBDA y buffers de la Smart Array P410.
+- **Implementación de la Vía B (Arranque Desatendido 100% Red Oficial):**
+  - **Parámetro Obligatorio `inst.stage2`:** Se sustituye `inst.repo` por `inst.stage2=http://repo.almalinux.org/almalinux/9/BaseOS/x86_64/os`, permitiendo a Dracut montar dinámicamente el entorno de Anaconda por streaming HTTP sin saturar la memoria baja.
+  - **Depuración de Parámetros de Pantalla:** Se purga `vga=normal` y se fija `nomodeset inst.text console=tty0 console=ttyS0,115200n8`, estabilizando el conversor VGA a HDMI de la GPU Matrox MGA G200e.
+  - **Alineación de Kickstart:** `selinux --permissive` y sincronización con `chronyd` para desacoplar el arranque del desfase temporal de la pila de litio agotada.
+## 6. Culminación Exitosa del Ciclo de Despliegue y Arranque SAS
+
+La arquitectura en dos fases (Vía B con `inst.stage2` oficial) resolvió de forma definitiva el límite de ramdisk de 228 MB en Legacy BIOS:
+1. **Fase de Instalación:** Anaconda completó el particionado de discos SAS de 15,000 RPM, descargó 1.4 GB de paquetes RPM base por Gigabit y configuró OpenSSH y NTP antes del reinicio.
+2. **Fase de Producción:** Con la opción predeterminada `local_sas` (`sanboot --no-describe --drive 0x80`) en `boot.ipxe`, el servidor arranca de forma autónoma desde el almacenamiento SAS local.
+3. **Acceso Operativo:** Puerto SSH 22 disponible en `192.168.137.50` con credencial `root` / `nexusadmin2026!`.
+
+
+================================================================================
+# FILE: wiki/systems/local-autonomous-agent-stack-vixl-litellm.md
+================================================================================
+
+---
+type: system
+title: "Stack de Agente Autónomo Local: Vixl, LiteLLM, Ollama y Servidores MCP"
+description: "Documentación técnica del stack agéntico local sin suscripciones: interfaz Vixl, proxy LiteLLM para bypass de thinking en Qwen3, servidor Ollama y herramientas MCP"
+tags: [vixl, litellm, ollama, qwen3-8b, mcp, autonomous-agent, local-ai, tool-calling]
+created: 2026-11-27
+updated: 2026-11-27
+---
+
+# Stack de Agente Autónomo Local: Vixl, LiteLLM, Ollama y Servidores MCP
+
+## 1. Resumen Ejecutivo y Propósito
+El objetivo del stack es transformar un modelo de lenguaje local (`qwen3:8b-8k` / `qwen3:8b-agent`) ejecutado en la GPU de la laptop en un **agente autónomo funcional** capaz de interactuar con el sistema de archivos, buscar en la web mediante DuckDuckGo y procesar imágenes mediante visión local, replicando las capacidades de entornos comerciales (*Antigravity*, *Claude Code*, *Cursor*) con **cero costo de suscripción y 100% de privacidad**.
+
+### Arquitectura de Integración:
+* **Vixl (Host MCP e Interfaz):** Actúa como IDE y orquestador de herramientas (`vixl.exe` con configuración en `~/.vix/` y `~/.vixl/`).
+* **LiteLLM (Proxy Traductor):** Proxy local en Python (`litellm-env` en puerto 4000) que resuelve incompatibilidades de protocolo entre Vixl y Ollama, eliminando tokens de razonamiento (*thinking*) que bloquean el *tool use*.
+* **Ollama (Motor de Inferencia GPU):** Servidor local (`http://127.0.0.1:11434/v1`) ejecutando variantes optimizadas de `qwen3` aceleradas por la NVIDIA RTX 4060.
+* **Servidores MCP:** Herramientas estandarizadas bajo el Model Context Protocol para lectura de archivos, memoria persistente, búsqueda web y visión local.
+
+```text
+[ Usuario ]
+    │
+    ▼
+[ Vixl (Host MCP) ] ─── (Peticiones OpenAI-compatible en puerto 4000) ──► [ LiteLLM (Proxy) ]
+    │                                                                           │
+    ├─► [ MCP: filesystem ]                                                     │ (Inyección de reasoning_effort: "none")
+    ├─► [ MCP: web-search ]                                                     ▼
+    ├─► [ MCP: memory ]                                                 [ Ollama (API /v1 en puerto 11434) ]
+    └─► [ MCP: local-vision ] ◄── (Visión con qwen3-vl:8b-instruct) ──── [ qwen3:8b-agent (16K context) ]
+```
+
+---
+
+## 2. Fase 1: Configuración Base de Vixl y Ollama
+
+### 2.1. El Problema del Protocolo de Respuestas y `providers.json`
+Vixl se comunica con los motores mediante una API compatible con OpenAI. No obstante, por defecto, Vixl intentaba invocar la **API de "Responses"**, no implementada en Ollama, produciendo el error crítico:
+`unknown input item type: "item_reference"` al intentar encadenar llamadas a herramientas.
+
+**Solución Implementada:**
+Se creó el archivo `providers.json` forzando el dialecto clásico de *Chat Completions*:
+* **Ruta de Configuración:** `C:\Users\lenin\.vix\providers.json`
+* **Definición Clave:** `"wire_api": "chat"` con base URL `http://127.0.0.1:11434/v1`.
+
+### 2.2. Ampliación de la Ventana de Contexto (`num_ctx`)
+El modelo base `qwen3:8b-8k` venía limitado a 8,192 tokens. Este espacio resultaba insuficiente para alojar simultáneamente el prompt de sistema del agente, los esquemas JSON de las herramientas MCP y el historial de conversación.
+
+**Solución Implementada:**
+Se creó la variante especializada `qwen3:8b-agent` mediante un `Modelfile` en Ollama:
+```dockerfile
+FROM qwen3:8b-8k
+PARAMETER num_ctx 16384
+SYSTEM /no_think
+```
+*Comando de generación:* `ollama create qwen3:8b-agent -f Modelfile`
+
+---
+
+## 3. Fase 2: Integración de Herramientas MCP en Vixl
+
+En el archivo `C:\Users\lenin\.vixl\mcp.json` se habilitaron cuatro servidores bajo el protocolo abierto Model Context Protocol:
+
+1. **`filesystem` (Acceso a Archivos Locales):**
+   * *Comando:* `npx -y @modelcontextprotocol/server-filesystem C:\Users\lenin\Documents`
+   * *Función:* Lectura, edición y exploración del directorio de trabajo.
+2. **`memory` (Memoria Persistente a Largo Plazo):**
+   * *Comando:* `npx -y @modelcontextprotocol/server-memory`
+   * *Función:* Grafo de conocimiento de entidades y relaciones para recordar contexto entre sesiones.
+3. **`web-search` (Búsqueda Web Gratuita):**
+   * *Comando:* `npx -y @zhafron/mcp-web-search`
+   * *Función:* Búsquedas en internet en vivo mediante DuckDuckGo sin requerir API keys ni suscripciones.
+4. **`local-vision` (Inspección Visual con VLM Local):**
+   * *Comando:* `uvx --with fastmcp==2.12.2 mcp-local-vision`
+   * *Variables de Entorno:* `VISION_MODEL=qwen3-vl:8b-instruct` y `VISION_OLLAMA_HOST=http://127.0.0.1:11434`
+   * *Función:* Permite al agente analizar capturas de pantalla e imágenes locales enviándolas al modelo multimodal local.
+
+---
+
+## 4. Fase 3: Despliegue de LiteLLM Proxy para Control de "Thinking"
+
+### 4.1. El Bucle Infinito del Modo de Pensamiento (Thinking Loop)
+A pesar de la configuración inicial, `qwen3:8b-agent` se atascaba emitiendo cadenas de razonamiento en el campo `reasoning` interno sin ejecutar las llamadas a herramientas ni entregar respuestas finales. Esto ocurría porque Vixl no enviaba el parámetro requerido por Ollama para silenciar el modo de pensamiento en su endpoint `/v1`.
+
+### 4.2. Aislamiento en Entorno Virtual Dedicado
+Para prevenir conflictos de dependencias entre librerías (como el conflicto entre `gtts` y `huggingface-hub` por la versión de `click`), se creó un entorno virtual aislado en Windows:
+* **Ubicación:** `C:\Users\lenin\Documents\AIDevelopment\ollama\qwen3-8b-8k\litellm-env`
+* **Instalación:** `pip install "litellm[proxy]"`
+
+### 4.3. Configuración del Proxy (`config.yaml`)
+LiteLLM intercepta las peticiones de Vixl e inyecta la orden estricta de desactivar el razonamiento antes de despachar a Ollama:
+
+```yaml
+model_list:
+  - model_name: qwen3-agent-no-think
+    litellm_params:
+      model: openai/qwen3:8b-agent
+      api_base: http://127.0.0.1:11434/v1
+      api_key: "ollama"
+      reasoning_effort: "none" # Desactiva el modo thinking en Ollama
+
+litellm_settings:
+  drop_params: true # Descarta parámetros de OpenAI no soportados por Ollama
+
+general_settings:
+  master_key: "sk-litellm-local-key-12345" # Clave de autorización local
+```
+
+### 4.4. Configuración en Vixl (`settings.json`)
+* **Proveedor Custom:** `providers.custom.litellm`
+* **Base URL:** `http://localhost:4000/v1`
+* **API Key:** `sk-litellm-local-key-12345`
+* **Model ID:** `qwen3-agent-no-think` (mapeado a roles de agente, orquestador y planificación).
+
+---
+
+## 5. Fase 4: Diagnóstico Empírico del Fallo de Visión y Resolución de Bloqueos
+
+Las pruebas de depuración en vivo e inspección forense de la base de datos de Vixl (`vixl.sqlite`), LiteLLM y Ollama revelaron las causas exactas por las que la herramienta `analyze_local_image` provocaba que Vixl se quedara esperando o finalizara en blanco:
+
+### 5.1. Causa Raíz 1: El Servidor MCP `local-vision` Nunca Arrancó (`uvx` Inexistente)
+* En `C:\Users\lenin\.vixl\mcp.json`, el servidor `local-vision` estaba configurado con `command: "uvx"`.
+* En el sistema operativo Windows 11 del host, el ejecutable `uvx.exe` **no está instalado ni existe en el PATH**.
+* Por lo tanto, el proceso del servidor MCP falló de inmediato con error `ENOENT` y la herramienta `analyze_local_image` **nunca llegó a registrarse** en el catálogo de herramientas de Vixl.
+
+### 5.2. Causa Raíz 2: Descarte Silencioso de Herramientas No Registradas en Vixl
+* Al enviar el prompt solicitando explícitamente usar `analyze_local_image`, el modelo `qwen3:8b-agent` obedeció a través de LiteLLM y generó una llamada estructurada válida:
+  `analyze_local_image({"image_path": "...", "question": "..."})` con `finish_reason: "tool_calls"`.
+* Sin embargo, cuando la interfaz Vixl recibió este `tool_calls`, buscó en su registro interno y **no encontró ninguna función asociada** a `analyze_local_image`.
+* Al carecer de un manejador válido, el motor de ejecución agéntica de Vixl abortó el ciclo de forma silenciosa (registrado en la tabla `chat_messages` con `parts_json: []` y `finish: "stop"`), dejando la interfaz visual colgada o vacía sin emitir advertencia al usuario.
+
+### 5.3. Causa Raíz 3: Inviabilidad de Doble Modelo 8B en 8 GB de VRAM (Swapping y Timeouts)
+* Se ejecutó una prueba de inferencia directa enviando la imagen en Base64 al endpoint `/api/generate` de Ollama con el modelo `qwen3-vl:8b-instruct`.
+* **Resultado funcional:** El modelo respondió exitosamente con una descripción detallada y precisa de la geometría 3D y gradientes azules del logo.
+* **Métricas de Rendimiento:**
+  - Tiempo de inferencia: **54.90 segundos**.
+  - Consumo de memoria VRAM: **6,535 MiB** de los 8,188 MiB disponibles en la NVIDIA GeForce RTX 4060.
+* **El Cuello de Botella de Arquitectura:**
+  - `qwen3:8b-agent` ocupa ~5,600 MiB de VRAM.
+  - `qwen3-vl:8b-instruct` ocupa 6,535 MiB de VRAM.
+  - Cargar ambos modelos simultáneamente requeriría >12 GB de VRAM, superando la capacidad física de 8 GB.
+  - Como consecuencia, Ollama debe desalojar el agente a RAM de sistema, cargar el modelo de visión a GPU (15s), generar la respuesta (55s) y luego recargar el agente a GPU (15s). Este ciclo de swapping de ~85 segundos excede los límites de timeout estándar de Vixl y los clientes MCP (fijados habitualmente entre 30 y 60 segundos).
+
+---
+
+## 6. Resolución de Integración: FastMCP Nativo y Mecanismo `call_mcp_tool` en Vixl
+
+Para sortear las limitaciones de `uvx` y registrar con éxito las herramientas en Vixl, se implementaron dos ajustes técnicos cruciales:
+
+### 6.1. Creación del Servidor FastMCP Nativo en Python
+Se implementó un script autocontenido en Python puro: `C:\Users\lenin\Documents\AIDevelopment\ollama\mcp-local-vision\server.py`:
+* **Runtime:** Entorno virtual dedicado con `fastmcp==2.12.2` y `httpx`.
+* **Configuración en Vixl (`Settings → MCP → local-vision`):**
+  - **Transport:** `stdio`
+  - **Command:** `C:\Users\lenin\Documents\AIDevelopment\ollama\qwen3-8b-8k\litellm-env\Scripts\python.exe`
+  - **Args:** `C:\Users\lenin\Documents\AIDevelopment\ollama\mcp-local-vision\server.py`
+  - **Variables de Entorno:** `VISION_MODEL=qwen3-vl:8b-instruct` y `VISION_OLLAMA_HOST=http://127.0.0.1:11434`.
+
+### 6.2. Invocación Canónica en Vixl mediante `call_mcp_tool`
+A diferencia de otros clientes MCP que aplanan las herramientas como funciones de primer nivel, **Vixl encapsula todos los servidores MCP externos bajo una única meta-herramienta nativa**: `call_mcp_tool`.
+* **Firma de Invocación:**
+  ```json
+  {
+    "serverId": "local-vision",
+    "toolName": "analyze_local_image",
+    "args": {
+      "file_path": "C:\\Users\\lenin\\Documents\\Images\\Logos\\Microsoft_Azure.svg.png",
+      "question": "Describe detalladamente el logo, incluyendo su forma, colores y cualquier texto visible."
+    }
+  }
+  ```
+* **Aprobación de Permisos en UI:** Toda herramienta MCP requiere autorización explícita del usuario en la interfaz visual de Vixl (`Allow once` o `Always Allow`).
+
+---
+
+## 7. Validación End-to-End y Diagnóstico de Alucinaciones Semánticas
+
+Al ejecutar la invocación con `call_mcp_tool` y autorizar el permiso permanente ("Always Allow"), el flujo operó de principio a fin sin bloqueos ni errores de protocolo:
+1. Vixl solicitó confirmación y ejecutó `call_mcp_tool`.
+2. El servidor FastMCP en Python leyó el archivo local, codificó en Base64 e invocó Ollama (`qwen3-vl:8b-instruct`).
+3. El modelo de visión respondió en ~50 segundos.
+4. Vixl recibió la respuesta completa y la renderizó en la interfaz de chat.
+
+### El Hallazgo Crítico: Alucinación Semántica de 8B
+Aunque la detección visual de bajo nivel fue impecable (reconoció la letra "A", la forma 3D y los tonos azul marino y cian), el modelo concluyó erróneamente que era el logo de **Adobe**, asociando la "A" estilizada con software creativo en lugar de correlacionar el nombre del archivo (`Microsoft_Azure.svg.png`) y la paleta cromática de Azure. Solo rectificó tras ser confrontado por el usuario en el chat.
+
+Para un análisis detallado sobre el impacto de esta alucinación en entornos autónomos no supervisados, consultar el artículo complementario:
+👉 [Límites de Modelos VLM Locales (8B) y Riesgos en Harnesses Autónomos](../concepts/local-vlm-hallucinations-and-autonomous-harness-limits.md).
+
+---
+
+## 8. Soluciones y Arquitectura Recomendada para Visión Local
+
+1. **Reemplazo de uvx por Python Nativo:** Crear un script FastMCP autocontenido ejecutado directamente por el entorno virtual de Python (`python.exe vision_server.py`) en lugar de depender de `uvx`.
+2. **Uso de un VLM Ultraligero (2B en lugar de 8B):**
+   - En lugar de `qwen3-vl:8b` (6.5 GB), utilizar modelos de visión compactos como **`moondream2`** (~1.8 GB VRAM) o **`minicpm-v`** (~2.5 GB VRAM).
+   - Un modelo de 2 GB permite que coexista en memoria o se cargue en menos de 3 segundos, reduciendo el tiempo total de inferencia a menos de 8 segundos y evitando cualquier riesgo de timeout.
+3. **Alternativa Multimodal Nativa:** Utilizar un único modelo unificado que sea multimodal y soporte tanto texto/herramientas como visión en un solo peso (ejemplo: `llama3.2-vision:11b` cuando haya más VRAM o quantizaciones reducidas).
+
+---
+
+## 9. Buenas Prácticas y Lecciones Aprendidas
+
+1. **Ruta Real de Configuración de Vixl:** Vixl lee de forma primaria `C:\Users\lenin\.vix\` (sin 'l' final) para `providers.json`, mientras que las sesiones, LSPs y extensiones residen en `~/.vixl/`.
+2. **Mínimo de Contexto para Agentes:** Los modelos de 8K tokens no son viables para agentes con múltiples herramientas MCP. Se requiere un mínimo de **16,384 tokens** (`num_ctx 16384`) para dar espacio a los esquemas JSON de las funciones.
+3. **Gobierno del Razonamiento en Qwen3:** Los modelos de la familia Qwen3 requieren el parámetro `reasoning_effort: "none"` en peticiones de API o el comando de sistema `/no_think` en su Modelfile para operar como agentes de herramientas directas.
+4. **Utilidad de los Proxies de Protocolo:** LiteLLM permite corregir diferencias de especificación entre interfaces agénticas y motores locales sin alterar el código fuente de ninguna de las herramientas.
+5. **Verificación de Binarios en Windows:** Todo comando en `mcp.json` debe comprobarse previamente en la consola del sistema (`where.exe <comando>`) para garantizar que el runtime del host pueda invocarlo sin errores `ENOENT`.
+
+
+================================================================================
+# FILE: wiki/systems/nextjs-dashboard.md
+================================================================================
+
+---
+type: system
+title: "Frontend Next.js en GitHub Pages"
+description: "Panel de control estático con autenticación en cliente para monitoreo de telemetría y estado de servidores"
+tags: [nextjs, react, tailwindcss, typescript, github-pages, ssg]
+created: 2026-11-22
+updated: 2026-11-22
+---
+
+# Frontend Next.js en GitHub Pages (`dashboard`)
+
+## 1. Arquitectura de Exportación Estática
+
+La aplicación está construida sobre **Next.js 14+** con App Router y configurada con `output: 'export'`. Esto permite que el sitio se compile a un conjunto de ficheros HTML, JS y CSS listos para ser servidos por la infraestructura CDN de GitHub Pages sin costo.
+
+## 2. Componentes Clave
+
+1. **`AuthGuard.tsx`**: Componente de orden superior que intercepta la navegación. Comprueba la validez del token JWT almacenado en `sessionStorage`; si expira o no existe, redirige de inmediato a `/login`.
+2. **`ServerMetrics.tsx`**: Representación gráfica y métricas en tiempo real de porcentaje de CPU por hilo, memoria RAM ocupada, swap, temperatura y latencia de red.
+3. **`AiStatus.tsx`**: Monitor del motor de inferencia local. Indica el modelo activo, velocidad de procesamiento en tokens por segundo (tok/s) y latencia al primer token (TTFT).
+4. **`MiningStatus.tsx`**: Panel de telemetría de XMRig con hashrate instantáneo (H/s), hilos asignados, shares validados y estado del semáforo de gobernanza de recursos.
+5. **`lib/crypto.ts`**: Utilidad criptográfica cliente que calcula el resumen SHA-256 o PBKDF2 de la contraseña antes de su transmisión a la API.
+
+## 3. Parámetros de Configuración (`next.config.mjs`)
+- `basePath`: `'/xeon-nexus-sentinel'`
+- `trailingSlash`: `true`
+- `images`: `{ unoptimized: true }`
+
+
+================================================================================
 # FILE: raw/cloud/free-tier-limits.md
 ================================================================================
 
@@ -2173,4 +2504,33 @@ Registro cronológico acumulativo (append-only) de decisiones de diseño, tareas
      * Megacable (Fibra Óptica FTTH): Asignado a tráfico masivo, nodo DeNet Storage, inferencia remota y APIs por su alto ancho de banda y latencia inferior a 10 ms.
      * EniNetworks (Antena WISP en Techo): Asignado a monetización DePIN mediante nodo Grass Network (aprovechando una segunda dirección IP pública residencial independiente), línea de respaldo por failover y bots de arbitraje blockchain.
    - **Documentación:** Creación de `wiki/systems/dual-wan-and-repeater-network-topology.md` y actualización de `wiki/entities/hp-server-node.md` e `index.md`.
+
+33. **Ingesta de Arquitectura del Stack de Agente Autónomo Local (Vixl, LiteLLM, Ollama y MCP):**
+   - **Objetivo y Componentes:** Documentación técnica integral de la solución para operar un agente de código autónomo 100% libre en la laptop sin depender de Claude Code, GitHub Copilot ni Antigravity IDE:
+     * Interfaz: Vixl IDE (`vixl.exe`, `~/.vix/` y `~/.vixl/`) con soporte nativo de LSPs para 30+ lenguajes y host MCP.
+     * Proxy Traductor: LiteLLM Proxy en entorno virtual dedicado (`litellm-env` en puerto 4000) ejecutando `config.yaml` con `reasoning_effort: "none"`, `drop_params: true` y `master_key`.
+     * Motor de Inferencia: Ollama (`127.0.0.1:11434`) con modelo `qwen3:8b-agent` ampliado a 16K de contexto (`num_ctx 16384`) y comando de sistema `/no_think`.
+     * Herramientas MCP: Integración de `filesystem` (acceso a documentos), `memory` (grafo de conocimiento), `web-search` (DuckDuckGo sin API key) y `local-vision` (VLM multimodal con `qwen3-vl:8b-instruct`).
+   - **Resolución de Problemas Críticos:**
+     * Protocolo de respuestas: Corrección de `wire_api: "chat"` en `C:\Users\lenin\.vix\providers.json` para evitar el error `unknown input item type: "item_reference"`.
+     * Bucle de razonamiento: Neutralización del modo thinking de Qwen3 mediante inyección de `reasoning_effort: "none"` en LiteLLM.
+     * Diagnóstico de espera en Vixl: Identificación de discrepancia en `finish_reason` ("stop" vs "tool_calls") y saturación del 76% de la ventana de contexto por esquemas MCP.
+   - **Documentación:** Creación de `wiki/systems/local-autonomous-agent-stack-vixl-litellm.md` y actualización de `wiki/entities/thunderobot-laptop-node.md` e `index.md`.
+
+34. **Auditoría Forense de Vixl SQLite y Diagnóstico Empírico de analyze_local_image:**
+   - **Pruebas de Tool Calling en Vivo:** Se verificó el comportamiento de LiteLLM (qwen3-agent-no-think) respondiendo con finish_reason: 'tool_calls' perfecto ante solicitudes de herramientas (web_search y analyze_local_image).
+   - **Inspección Forense de Base de Datos de Vixl (vixl.sqlite):** Se auditaron las tablas chats y chat_messages (chats 2d5422a2 y 6a0f00bb). Se constató que ante el prompt de visión, Vixl cerró el turno con parts_json: [] y finish: 'stop' sin registrar ningún tool call ni mensaje de error.
+   - **Identificación de Causas Raíz:**
+     1. Ausencia del ejecutable uvx: En mcp.json, el servidor local-vision dependía de command: 'uvx', pero uvx.exe no existe en Windows 11 (ENOENT). El servidor nunca inició ni registró analyze_local_image en el catálogo de Vixl.
+     2. Descarte silencioso por Vixl: Al recibir una petición para una herramienta inexistente en su registro, Vixl aborta la ejecución sin arrojar error al usuario.
+     3. Cuello de botella físico de VRAM (8 GB RTX 4060): La ejecución directa en Ollama (qwen3-vl:8b-instruct) con la imagen de Azure tomó 54.90 segundos y consumió 6,535 MiB de VRAM. La concurrencia de qwen3:8b-agent (5.6 GB) y qwen3-vl (6.5 GB) suma >12 GB, forzando un ciclo de swapping de ~85s que dispara los timeouts de Vixl.
+   - **Actualización Documental:** Actualización de wiki/systems/local-autonomous-agent-stack-vixl-litellm.md con las soluciones recomendadas (servidor FastMCP nativo en Python y adopción de VLMs ultraligeros de 2B como moondream2 o minicpm-v).
+
+35. **Validación End-to-End de `call_mcp_tool` en Vixl, Diagnóstico de Alucinación de Adobe/Azure y Límites de Harnesses Autónomos 8B:**
+   - **Despliegue de Servidor FastMCP Nativo:** Se implementó `server.py` en `C:\Users\lenin\Documents\AIDevelopment\ollama\mcp-local-vision\server.py` utilizando FastMCP 2.12.2 sobre el entorno virtual de Python, eliminando la dependencia del binario inexistente `uvx.exe`.
+   - **Mecanismo de Despacho de Herramientas en Vixl:** Se descubrió y validó empíricamente que Vixl no inyecta herramientas MCP como funciones globales, sino que las enruta a través de la función nativa `call_mcp_tool(serverId, toolName, args)`.
+   - **Ejecución y Flujo de Permisos ("Always Allow"):** Al estructurar la solicitud mediante `call_mcp_tool`, Vixl presentó la tarjeta de aprobación interactiva. El usuario seleccionó "Always Allow", permitiendo la ejecución exitosa del flujo completo (Vixl → LiteLLM → Ollama `qwen3:8b-agent` → FastMCP Python → Ollama `qwen3-vl:8b-instruct`).
+   - **Diagnóstico de Alucinación Semántica:** El modelo extrajo con precisión quirúrgica los tensores visuales (letra "A", relieve 3D, azul marino y azul cielo), pero alucinó categóricamente que correspondía al logotipo de "Adobe", requiriendo la intervención humana en el chat para rectificar que pertenecía a Microsoft Azure.
+   - **Conclusión de Arquitectura (La Paradoja de la Verificación):** Si un modelo local 8B requiere auditoría humana constante para validar si sus deducciones son verdaderas o alucinaciones, el harness pierde su propósito autónomo y sobrecarga cognitivamente al desarrollador. Se formuló la directiva de reservar los modelos locales 8B para tareas deterministas con tests unitarios, delegando visión compleja y arquitectura a modelos de frontera (Gemini/Claude).
+   - **Documentación Modular:** Creación de `wiki/concepts/local-vlm-hallucinations-and-autonomous-harness-limits.md`, actualización de `wiki/systems/local-autonomous-agent-stack-vixl-litellm.md`, `index.md` y bitácora `log.md`.
 

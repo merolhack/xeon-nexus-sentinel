@@ -43,6 +43,7 @@ Bienvenido a la memoria central de **Xeon-Nexus-Sentinel**. Este índice es la r
 * [strata-vs-ollama-inference.md](file:///wiki/concepts/strata-vs-ollama-inference.md) — Análisis arquitectónico de Strata Frameworks (MoE Qwen3.8/GLM), jerarquía de memoria y viabilidad frente a Ollama en CPU Xeon Nehalem.
 * [server-memory-and-bios-governance.md](file:///wiki/concepts/server-memory-and-bios-governance.md) — Gobernanza de memoria DDR3 ECC (RDIMM vs UDIMM), reglas de coexistencia y configuración de arranque en BIOS y Smart Array P410.
 * [headless-boot-diagnostics-and-telemetry.md](file:///wiki/concepts/headless-boot-diagnostics-and-telemetry.md) — Diagnóstico de arranque sin monitor, telemetría de capa física PHY (100M/1G) y automatización de inicio iPXE (sanboot).
+* [local-vlm-hallucinations-and-autonomous-harness-limits.md](file:///wiki/concepts/local-vlm-hallucinations-and-autonomous-harness-limits.md) — Límites de modelos VLM locales (8B), riesgos en harnesses autónomos y la paradoja de la verificación humana.
 
 ### 3. Entidades de Hardware e Infraestructura (`wiki/entities/`)
 * [hp-server-node.md](file:///wiki/entities/hp-server-node.md) — Servidor empresarial HP ProLiant ML150 G6 en modo headless con AlmaLinux 9 Minimal.
