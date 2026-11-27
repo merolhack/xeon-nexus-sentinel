@@ -94,7 +94,7 @@ El objetivo de un **harness autónomo** es delegar tareas de ingeniería de soft
 | **Tiempo de Inferencia** | 30 a 55 segundos | 1.5 a 4 segundos |
 | **Precisión Semántica** | Media-Baja (vulnerable a alucinaciones) | Alta-Muy Alta (grounding riguroso) |
 | **Confiabilidad Autónoma** | Baja (requiere validación paso a paso) | Alta (apto para workflows desatendidos) |
-| **Costo Monetario** | $0 USD (100% gratuito local) | Micro-centavos por llamada (o capas gratuitas) |
+| **Costo Monetario** | 0 USD (100% gratuito local) | Micro-centavos por llamada (o capas gratuitas) |
 | **Privacidad** | 100% en máquina local (cero fugas) | Datos viajan a centros de datos de proveedores |
 
 ---

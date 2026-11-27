@@ -2,8 +2,8 @@
 - **Notebook URL:** https://notebook.google.com/notebook/1bd607be-628c-4228-a1f5-5b4f5dd59093
 - **Arquitectura:** Google OKF v0.2 + Karpathy 3-Layer LLM Wiki (`raw/`, `wiki/`, `SPEC.md`)
 - **Archivos Compilados:** 29
-- **SHA-256:** `da4491f8c2e410a1886f692635de75c16a33573140bd5fbbb2fe065032d77113`
-- **Fecha de Compilación:** 2026-11-27T18:23:24.688Z
+- **SHA-256:** `8145997c75e43dc2c316a717bdd8ad5a0d4850b5a8db6d3e57cd6d5f9d8be4e7`
+- **Fecha de Compilación:** 2026-11-27T18:25:02.523Z
 
 
 ================================================================================
@@ -788,7 +788,7 @@ El objetivo de un **harness autónomo** es delegar tareas de ingeniería de soft
 | **Tiempo de Inferencia** | 30 a 55 segundos | 1.5 a 4 segundos |
 | **Precisión Semántica** | Media-Baja (vulnerable a alucinaciones) | Alta-Muy Alta (grounding riguroso) |
 | **Confiabilidad Autónoma** | Baja (requiere validación paso a paso) | Alta (apto para workflows desatendidos) |
-| **Costo Monetario** | $0 USD (100% gratuito local) | Micro-centavos por llamada (o capas gratuitas) |
+| **Costo Monetario** | 0 USD (100% gratuito local) | Micro-centavos por llamada (o capas gratuitas) |
 | **Privacidad** | 100% en máquina local (cero fugas) | Datos viajan a centros de datos de proveedores |
 
 ---
