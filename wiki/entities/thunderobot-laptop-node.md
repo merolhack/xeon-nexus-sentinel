@@ -78,3 +78,4 @@ Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID, FileSystem, Size, Fr
 # 5. Adaptadores de Red y Velocidad de Enlace
 Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed, MacAddress | Format-Table -AutoSize
 ```
+* **Stack de Agente Autónomo Local (Vixl + LiteLLM + Ollama + MCP):** Véase [local-autonomous-agent-stack-vixl-litellm.md](../systems/local-autonomous-agent-stack-vixl-litellm.md) para el detalle de la configuración de Vixl como host MCP, LiteLLM en puerto 4000 con bypass de thinking y Ollama con `qwen3:8b-agent` (16K context).

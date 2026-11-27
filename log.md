@@ -78,3 +78,15 @@ Registro cronológico acumulativo (append-only) de decisiones de diseño, tareas
      * Megacable (Fibra Óptica FTTH): Asignado a tráfico masivo, nodo DeNet Storage, inferencia remota y APIs por su alto ancho de banda y latencia inferior a 10 ms.
      * EniNetworks (Antena WISP en Techo): Asignado a monetización DePIN mediante nodo Grass Network (aprovechando una segunda dirección IP pública residencial independiente), línea de respaldo por failover y bots de arbitraje blockchain.
    - **Documentación:** Creación de `wiki/systems/dual-wan-and-repeater-network-topology.md` y actualización de `wiki/entities/hp-server-node.md` e `index.md`.
+
+33. **Ingesta de Arquitectura del Stack de Agente Autónomo Local (Vixl, LiteLLM, Ollama y MCP):**
+   - **Objetivo y Componentes:** Documentación técnica integral de la solución para operar un agente de código autónomo 100% libre en la laptop sin depender de Claude Code, GitHub Copilot ni Antigravity IDE:
+     * Interfaz: Vixl IDE (`vixl.exe`, `~/.vix/` y `~/.vixl/`) con soporte nativo de LSPs para 30+ lenguajes y host MCP.
+     * Proxy Traductor: LiteLLM Proxy en entorno virtual dedicado (`litellm-env` en puerto 4000) ejecutando `config.yaml` con `reasoning_effort: "none"`, `drop_params: true` y `master_key`.
+     * Motor de Inferencia: Ollama (`127.0.0.1:11434`) con modelo `qwen3:8b-agent` ampliado a 16K de contexto (`num_ctx 16384`) y comando de sistema `/no_think`.
+     * Herramientas MCP: Integración de `filesystem` (acceso a documentos), `memory` (grafo de conocimiento), `web-search` (DuckDuckGo sin API key) y `local-vision` (VLM multimodal con `qwen3-vl:8b-instruct`).
+   - **Resolución de Problemas Críticos:**
+     * Protocolo de respuestas: Corrección de `wire_api: "chat"` en `C:\Users\lenin\.vix\providers.json` para evitar el error `unknown input item type: "item_reference"`.
+     * Bucle de razonamiento: Neutralización del modo thinking de Qwen3 mediante inyección de `reasoning_effort: "none"` en LiteLLM.
+     * Diagnóstico de espera en Vixl: Identificación de discrepancia en `finish_reason` ("stop" vs "tool_calls") y saturación del 76% de la ventana de contexto por esquemas MCP.
+   - **Documentación:** Creación de `wiki/systems/local-autonomous-agent-stack-vixl-litellm.md` y actualización de `wiki/entities/thunderobot-laptop-node.md` e `index.md`.
