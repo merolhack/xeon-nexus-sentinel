@@ -121,3 +121,11 @@ Registro cronológico acumulativo (append-only) de decisiones de diseño, tareas
    - **Registro en `mcp_config.json`:** Se dio de alta el servidor `nvidia-nim` en `C:\Users\lenin\.gemini\config\mcp_config.json` y se generaron los esquemas JSON de herramientas en `C:\Users\lenin\.gemini\antigravity\mcp\nvidia-nim\`.
    - **Validación en Vivo:** Pruebas de inferencia directa confirmando respuestas exitosas en ~2-4 segundos con extracción de `content` y manejo de `reasoning_content`.
    - **Gobernanza Agéntica:** Incorporación del Mandato 7 en `AGENTS.md` para delegar visión pesada y ventanas masivas a `nvidia-nim`, preservando `ollama-local` para tareas offline deterministas. Sincronización completa con Gemini Notebook.
+
+38. **Mandato Estricto de Gobernanza Dual (Ollama Local vs NVIDIA NIM) y Auto-Indexación en Codebase Memory:**
+   - **Evaluación Empírica Comparada:** Se ejecutó la misma consulta técnica en ambos servidores MCP (`consultar_modelo_local` vs `consultar_modelo_nvidia`). Se demostró que `nvidia-nim` responde más del doble de rápido (14s vs 31s), con 0 MB de VRAM local y con un criterio analítico riguroso que evita alucinaciones sobre capas y cuotas gratuitas en la nube.
+   - **Codificación en AGENTS.md (Mandatos 1 y 4):**
+     * `ollama-local`: Salvaguarda obligatoria para entornos offline y procesamiento de secretos, credenciales o claves privadas que nunca deben salir de la máquina local.
+     * `nvidia-nim`: Canal prioritario para visión multimodal de 120B, razonamiento complejo, código y consultas técnicas en la nube.
+     * `codebase-memory`: Verificación obligatoria de estado; si el proyecto no está indexado, se DEBE ejecutar inmediatamente `index_repository`.
+   - **Ingesta Modular en LLM Wiki:** Creación de `wiki/concepts/dual-mcp-governance-ollama-and-nvidia.md`, actualización de `index.md` y bitácora `log.md`.

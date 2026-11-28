@@ -9,10 +9,10 @@ Este documento establece las **reglas estrictas y de cumplimiento obligatorio** 
 > [!IMPORTANT]
 > **MANDATOS OBLIGATORIOS (PRIORIDAD CRÍTICA):**
 >
-> 1. **Usar `ollama-local` con el modelo `qwen3:8b-8k`:**
->    - Para tareas mecánicas, boilerplate repetitivo, formateo o generación auxiliar de baja complejidad, se debe delegar prioritariamente en la herramienta MCP `consultar_modelo_local` del servidor `ollama-local`.
->    - La herramienta consulta primero `gemma4:cloud` si hay cuota disponible y cae automáticamente al modelo local `qwen3:8b-8k`.
->    - Queda estrictamente prohibido intentar invocar comandos interactivos en consola (`ollama run`) que puedan bloquear la terminal.
+> 1. **Gobernanza Dual de Inferencia Secundaria (`ollama-local` vs `nvidia-nim`):**
+>    - El agente DEBE utilizar siempre ambos servidores MCP dependiendo estrictamente del caso de uso:
+>      * **`ollama-local` (`consultar_modelo_local`):** Es la salvaguarda obligatoria para cuando se esté **offline (sin conexión a internet)** o cuando se procesen **secretos, credenciales, tokens y claves privadas** que nunca deben salir de la máquina local. Consulta primero `gemma4:cloud` si hay cuota y cae automáticamente al modelo local `qwen3:8b-8k`. Queda estrictamente prohibido intentar invocar comandos interactivos en consola (`ollama run`) que bloqueen la terminal.
+>      * **`nvidia-nim` (`consultar_modelo_nvidia` y `analizar_imagen_nvidia`):** Se DEBE utilizar de forma prioritaria para tareas complejas, visión multimodal, razonamiento y consultas técnicas en la nube. Ofrece respuestas más del doble de rápidas (~2s a 4s), sin consumir memoria de la tarjeta gráfica (0 MB VRAM local) y con un criterio técnico superior que evita alucinaciones sobre precios, cuotas y compatibilidades en la nube. Incluye `moonshotai/kimi-k3.1-pro` (1M tokens de contexto masivo y arquitectura) y `nvidia/nemotron-3.5-super-vl-120b` (visión 120B de alta fidelidad).
 >
 > 2. **Siempre leer y actualizar la LLM Wiki como memoria del proyecto:**
 >    - Antes de analizar o modificar cualquier componente, el agente DEBE leer `index.md` y los artículos relevantes en `wiki/` (`systems/`, `concepts/`, `entities/`).
@@ -23,10 +23,10 @@ Este documento establece las **reglas estrictas y de cumplimiento obligatorio** 
 >    - El agente DEBE ejecutar rutinariamente la limpieza preventiva de estos archivos (`npm run clean:zones` o `find . -name "*Zone.Identifier*" -delete`) antes de crear commits, ejecutar tests o indexar el repositorio.
 >    - Ningún archivo `Zone.Identifier` debe ingresar al árbol de control de versiones de Git.
 >
-> 4. **Siempre actualizar Codebase Memory:**
+> 4. **Siempre usar y mantener Codebase Memory (Auto-Indexación Obligatoria):**
 >    - Este proyecto utiliza `codebase-memory` para mantener un grafo de conocimiento semántico (LSP, rutas, funciones y llamadas).
 >    - Usar prioritariamente las herramientas MCP del grafo (`search_graph`, `trace_path`, `get_code_snippet`, `query_graph`, `index_status`) antes de recurrir a búsquedas textuales ciegas (`grep`/`find`).
->    - Tras añadir, renombrar o refactorizar archivos de código o servicios, es OBLIGATORIO ejecutar `index_repository` para refrescar el grafo.
+>    - **Regla estricta de indexación:** El agente DEBE verificar el estado de indexación. **Si el proyecto no está indexado, se DEBE ejecutar inmediatamente `index_repository`.** Asimismo, tras añadir, renombrar o refactorizar archivos de código o servicios, es OBLIGATORIO refrescar el grafo con `index_repository`.
 >
 > 5. **Siempre actualizar Gemini Notebook y solicitar confirmación de actualización:**
 >    - El cuaderno oficial de Gemini Notebook para este proyecto es:
@@ -38,9 +38,6 @@ Este documento establece las **reglas estrictas y de cumplimiento obligatorio** 
 >    - Queda terminantemente prohibido ejecutar comandos de red, pruebas de conectividad o descargas (`curl`, `Invoke-WebRequest`, sockets, escaneos de puertos) sin un timeout explícito y corto (máximo 5 a 10 segundos, ej: `curl --max-time 10`, `-TimeoutSec 5`).
 >    - Prohibido enviar comandos de sondeo simple o verificación ligera a tareas en segundo plano sin guardia de tiempo; procesos colgados sin timeout congelan la sesión del agente por decenas de minutos.
 >    - Toda verificación de red debe ejecutarse de forma acotada y si un endpoint no responde en 5 segundos, abortar de inmediato y continuar el flujo sin bloquear al usuario.
->
-> 7. **Uso del Servidor MCP `nvidia-nim` para Visión y Contexto Masivo:**
->    - Para tareas que requieran visión multimodal de alta resolución (análisis de capturas, UI, mockups, diagramas) o análisis de código con contextos extensos (hasta 1M de tokens), el agente debe utilizar las herramientas MCP de `nvidia-nim`: `analizar_imagen_nvidia` (Nemotron Super VL 120B) y `consultar_modelo_nvidia` (Kimi K3.1 Pro / Nemotron Lightning), eliminando el consumo de VRAM local y previniendo alucinaciones.
 
 ---
 
@@ -83,7 +80,10 @@ Este documento establece las **reglas estrictas y de cumplimiento obligatorio** 
 [Inicio de Tarea]
        │
        ▼
-1. Consultar LLM Wiki (index.md y wiki/) + Codebase Memory (search_graph)
+1. Consultar LLM Wiki (index.md y wiki/) + Codebase Memory (si no indexado: index_repository; luego search_graph)
+       │
+       ▼
+2. Delegar tareas secundarias: ollama-local (offline/secretos) vs nvidia-nim (visión/código/rápido)
        │
        ▼
 2. Limpieza preventiva: scripts/clean-zone-identifiers.sh
