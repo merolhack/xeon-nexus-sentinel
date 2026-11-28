@@ -129,3 +129,9 @@ Registro cronológico acumulativo (append-only) de decisiones de diseño, tareas
      * `nvidia-nim`: Canal prioritario para visión multimodal de 120B, razonamiento complejo, código y consultas técnicas en la nube.
      * `codebase-memory`: Verificación obligatoria de estado; si el proyecto no está indexado, se DEBE ejecutar inmediatamente `index_repository`.
    - **Ingesta Modular en LLM Wiki:** Creación de `wiki/concepts/dual-mcp-governance-ollama-and-nvidia.md`, actualización de `index.md` y bitácora `log.md`.
+
+39. **Integración de Inferencia Ultra-Rápida con Groq Cloud LPU y Servidor MCP `groq-cloud`:**
+   - **Gestión Segura de Credenciales:** Registro de `GROQ_API_KEY` en `.env` y referencia pública en `.env.example`. Actualización inmediata del documento de credenciales en Gemini Notebook.
+   - **Validación de Inferencia de Alta Velocidad:** Prueba exitosa contra `https://api.groq.com/openai/v1/chat/completions` con `openai/gpt-oss-120b` (371 tokens procesados en 0.601 segundos, ~485 tokens/segundo).
+   - **Servidor FastMCP `groq_mcp_server.py`:** Implementación y registro de `groq-cloud` en `mcp_config.json` con la herramienta `consultar_modelo_groq` (`gpt-oss-120b`, `gpt-oss-20b` y `qwen/qwen3.8-27b`).
+   - **Proxy Unificado en LiteLLM y Vixl:** Incorporación de `groq-gpt-oss-120b` en `config.yaml` y `providers.json`, permitiendo invocar modelos LPU de 120B en Vixl a través de `http://localhost:4000/v1`.
