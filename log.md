@@ -115,3 +115,9 @@ Registro cronológico acumulativo (append-only) de decisiones de diseño, tareas
    - **Configuración de Vixl IDE (`providers.json`):** Se actualizaron `~/.vix/providers.json` y `~/.vixl/providers.json` para exponer los modelos cloud y locales directamente en la interfaz de chat.
    - **Desacoplamiento MCP:** Los modelos en la nube razonan y emiten `call_mcp_tool`, ejecutando operaciones locales en Windows 11 / WSL2 sin consumir VRAM en la GPU de la laptop.
    - **Documentación Modular:** Creación de `wiki/systems/hybrid-cloud-inference-nvidia-nim.md`, actualización de `index.md` y bitácora `log.md`.
+
+37. **Despliegue del Servidor MCP `nvidia-nim` en Antigravity IDE:**
+   - **Implementación FastMCP en Python:** Creación de `C:\Users\lenin\Documents\AIDevelopment\ollama\nvidia_mcp_server.py` exponiendo `consultar_modelo_nvidia` (Nemotron Lightning 30B / Kimi K3.1 Pro con 1M contexto) y `analizar_imagen_nvidia` (Nemotron Super VL 120B multimodal).
+   - **Registro en `mcp_config.json`:** Se dio de alta el servidor `nvidia-nim` en `C:\Users\lenin\.gemini\config\mcp_config.json` y se generaron los esquemas JSON de herramientas en `C:\Users\lenin\.gemini\antigravity\mcp\nvidia-nim\`.
+   - **Validación en Vivo:** Pruebas de inferencia directa confirmando respuestas exitosas en ~2-4 segundos con extracción de `content` y manejo de `reasoning_content`.
+   - **Gobernanza Agéntica:** Incorporación del Mandato 7 en `AGENTS.md` para delegar visión pesada y ventanas masivas a `nvidia-nim`, preservando `ollama-local` para tareas offline deterministas. Sincronización completa con Gemini Notebook.

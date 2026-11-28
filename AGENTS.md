@@ -38,6 +38,9 @@ Este documento establece las **reglas estrictas y de cumplimiento obligatorio** 
 >    - Queda terminantemente prohibido ejecutar comandos de red, pruebas de conectividad o descargas (`curl`, `Invoke-WebRequest`, sockets, escaneos de puertos) sin un timeout explícito y corto (máximo 5 a 10 segundos, ej: `curl --max-time 10`, `-TimeoutSec 5`).
 >    - Prohibido enviar comandos de sondeo simple o verificación ligera a tareas en segundo plano sin guardia de tiempo; procesos colgados sin timeout congelan la sesión del agente por decenas de minutos.
 >    - Toda verificación de red debe ejecutarse de forma acotada y si un endpoint no responde en 5 segundos, abortar de inmediato y continuar el flujo sin bloquear al usuario.
+>
+> 7. **Uso del Servidor MCP `nvidia-nim` para Visión y Contexto Masivo:**
+>    - Para tareas que requieran visión multimodal de alta resolución (análisis de capturas, UI, mockups, diagramas) o análisis de código con contextos extensos (hasta 1M de tokens), el agente debe utilizar las herramientas MCP de `nvidia-nim`: `analizar_imagen_nvidia` (Nemotron Super VL 120B) y `consultar_modelo_nvidia` (Kimi K3.1 Pro / Nemotron Lightning), eliminando el consumo de VRAM local y previniendo alucinaciones.
 
 ---
 

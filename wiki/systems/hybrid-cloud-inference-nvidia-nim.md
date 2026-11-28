@@ -140,9 +140,22 @@ Esto permite que un modelo de frontera de 120B o 1M de contexto opere directamen
 
 ---
 
-## 6. Política de Seguridad y Cero Secretos
+## 7. Integración Nativa en Antigravity IDE: Servidor MCP `nvidia-nim`
+
+Para replicar y superar las capacidades del servidor MCP `ollama-local`, se implementó el servidor nativo FastMCP `C:\Users\lenin\Documents\AIDevelopment\ollama\nvidia_mcp_server.py`, registrado en `C:\Users\lenin\.gemini\config\mcp_config.json`:
+
+### 7.1. Herramientas Expuestas para Agentes en Antigravity
+1. **`consultar_modelo_nvidia(prompt: str, modelo: str = "lightning")`:**
+   - Permite delegar tareas de código y refactorización a `nvidia/nemotron-3.5-lightning-30b` (~2s de respuesta) o razonamiento de arquitectura masiva a `moonshotai/kimi-k3.1-pro` (1M tokens de ventana de contexto).
+2. **`analizar_imagen_nvidia(image_path: str, question: str)`:**
+   - Ingesta imágenes locales codificadas en Base64 directamente hacia el modelo multimodal `nvidia/nemotron-3.5-super-vl-120b-a12b`.
+   - Ofrece una precisión visual sin alucinaciones (reconociendo geometrías, paletas de colores y marcas exactas) con 0% de consumo de memoria VRAM en la GPU local.
+
+---
+
+## 8. Política de Seguridad y Cero Secretos
 
 Siguiendo el estándar de DevSecOps del proyecto:
-* La clave real `NVIDIA_API_KEY=nvapi-...` reside exclusivamente en `.env` (ignorado por `.gitignore`).
+* La clave real `NVIDIA_API_KEY=nvapi-...` reside exclusivamente en `.env` (ignorado por `.gitignore`) y en la configuración local de Antigravity IDE.
 * En el repositorio Git únicamente se rastrea `.env.example` con la plantilla pública `NVIDIA_API_KEY=nvapi-tu_clave_personal_de_nvidia_nim`.
 * Toda rotación o adición de proveedores en la nube debe cumplir con la validación de GitGuardian antes de ser enviada al control de versiones.

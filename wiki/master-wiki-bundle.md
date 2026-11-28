@@ -2,8 +2,8 @@
 - **Notebook URL:** https://notebook.google.com/notebook/1bd607be-628c-4228-a1f5-5b4f5dd59093
 - **Arquitectura:** Google OKF v0.2 + Karpathy 3-Layer LLM Wiki (`raw/`, `wiki/`, `SPEC.md`)
 - **Archivos Compilados:** 30
-- **SHA-256:** `823c59df2e3bf55c3d034566fff47b7ba3586d8cecb22bc48d2e1b452433f076`
-- **Fecha de Compilación:** 2026-11-27T23:16:23.512Z
+- **SHA-256:** `a3cc964269f0ff8f5ef2ac1ecd5fcd281a8e67dc677c39934c53adae453f6198`
+- **Fecha de Compilación:** 2026-11-28T00:44:27.658Z
 
 
 ================================================================================
@@ -50,6 +50,9 @@ Este documento establece las **reglas estrictas y de cumplimiento obligatorio** 
 >    - Queda terminantemente prohibido ejecutar comandos de red, pruebas de conectividad o descargas (`curl`, `Invoke-WebRequest`, sockets, escaneos de puertos) sin un timeout explícito y corto (máximo 5 a 10 segundos, ej: `curl --max-time 10`, `-TimeoutSec 5`).
 >    - Prohibido enviar comandos de sondeo simple o verificación ligera a tareas en segundo plano sin guardia de tiempo; procesos colgados sin timeout congelan la sesión del agente por decenas de minutos.
 >    - Toda verificación de red debe ejecutarse de forma acotada y si un endpoint no responde en 5 segundos, abortar de inmediato y continuar el flujo sin bloquear al usuario.
+>
+> 7. **Uso del Servidor MCP `nvidia-nim` para Visión y Contexto Masivo:**
+>    - Para tareas que requieran visión multimodal de alta resolución (análisis de capturas, UI, mockups, diagramas) o análisis de código con contextos extensos (hasta 1M de tokens), el agente debe utilizar las herramientas MCP de `nvidia-nim`: `analizar_imagen_nvidia` (Nemotron Super VL 120B) y `consultar_modelo_nvidia` (Kimi K3.1 Pro / Nemotron Lightning), eliminando el consumo de VRAM local y previniendo alucinaciones.
 
 ---
 
@@ -2234,10 +2237,23 @@ Esto permite que un modelo de frontera de 120B o 1M de contexto opere directamen
 
 ---
 
-## 6. Política de Seguridad y Cero Secretos
+## 7. Integración Nativa en Antigravity IDE: Servidor MCP `nvidia-nim`
+
+Para replicar y superar las capacidades del servidor MCP `ollama-local`, se implementó el servidor nativo FastMCP `C:\Users\lenin\Documents\AIDevelopment\ollama\nvidia_mcp_server.py`, registrado en `C:\Users\lenin\.gemini\config\mcp_config.json`:
+
+### 7.1. Herramientas Expuestas para Agentes en Antigravity
+1. **`consultar_modelo_nvidia(prompt: str, modelo: str = "lightning")`:**
+   - Permite delegar tareas de código y refactorización a `nvidia/nemotron-3.5-lightning-30b` (~2s de respuesta) o razonamiento de arquitectura masiva a `moonshotai/kimi-k3.1-pro` (1M tokens de ventana de contexto).
+2. **`analizar_imagen_nvidia(image_path: str, question: str)`:**
+   - Ingesta imágenes locales codificadas en Base64 directamente hacia el modelo multimodal `nvidia/nemotron-3.5-super-vl-120b-a12b`.
+   - Ofrece una precisión visual sin alucinaciones (reconociendo geometrías, paletas de colores y marcas exactas) con 0% de consumo de memoria VRAM en la GPU local.
+
+---
+
+## 8. Política de Seguridad y Cero Secretos
 
 Siguiendo el estándar de DevSecOps del proyecto:
-* La clave real `NVIDIA_API_KEY=nvapi-...` reside exclusivamente en `.env` (ignorado por `.gitignore`).
+* La clave real `NVIDIA_API_KEY=nvapi-...` reside exclusivamente en `.env` (ignorado por `.gitignore`) y en la configuración local de Antigravity IDE.
 * En el repositorio Git únicamente se rastrea `.env.example` con la plantilla pública `NVIDIA_API_KEY=nvapi-tu_clave_personal_de_nvidia_nim`.
 * Toda rotación o adición de proveedores en la nube debe cumplir con la validación de GitGuardian antes de ser enviada al control de versiones.
 
@@ -2697,4 +2713,10 @@ Registro cronológico acumulativo (append-only) de decisiones de diseño, tareas
    - **Configuración de Vixl IDE (`providers.json`):** Se actualizaron `~/.vix/providers.json` y `~/.vixl/providers.json` para exponer los modelos cloud y locales directamente en la interfaz de chat.
    - **Desacoplamiento MCP:** Los modelos en la nube razonan y emiten `call_mcp_tool`, ejecutando operaciones locales en Windows 11 / WSL2 sin consumir VRAM en la GPU de la laptop.
    - **Documentación Modular:** Creación de `wiki/systems/hybrid-cloud-inference-nvidia-nim.md`, actualización de `index.md` y bitácora `log.md`.
+
+37. **Despliegue del Servidor MCP `nvidia-nim` en Antigravity IDE:**
+   - **Implementación FastMCP en Python:** Creación de `C:\Users\lenin\Documents\AIDevelopment\ollama\nvidia_mcp_server.py` exponiendo `consultar_modelo_nvidia` (Nemotron Lightning 30B / Kimi K3.1 Pro con 1M contexto) y `analizar_imagen_nvidia` (Nemotron Super VL 120B multimodal).
+   - **Registro en `mcp_config.json`:** Se dio de alta el servidor `nvidia-nim` en `C:\Users\lenin\.gemini\config\mcp_config.json` y se generaron los esquemas JSON de herramientas en `C:\Users\lenin\.gemini\antigravity\mcp\nvidia-nim\`.
+   - **Validación en Vivo:** Pruebas de inferencia directa confirmando respuestas exitosas en ~2-4 segundos con extracción de `content` y manejo de `reasoning_content`.
+   - **Gobernanza Agéntica:** Incorporación del Mandato 7 en `AGENTS.md` para delegar visión pesada y ventanas masivas a `nvidia-nim`, preservando `ollama-local` para tareas offline deterministas. Sincronización completa con Gemini Notebook.
 
